@@ -18,3 +18,15 @@ vendor/
 cloud-scanner
 cloud_scanner
 deepfence_agent
+
+exportcontrols/aws/*.json
+exportcontrols/aws/steampipe-mod-aws-compliance
+
+exportcontrols/azure/*.json
+exportcontrols/azure/steampipe-mod-azure-compliance
+
+exportcontrols/gcp/*.json
+exportcontrols/gcp/steampipe-mod-gcp-compliance
+
+exportcontrols/kubernetes/*.json
+exportcontrols/kubernetes/steampipe-mod-kubernetes-compliance

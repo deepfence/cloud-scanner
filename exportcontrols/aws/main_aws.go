@@ -13,13 +13,13 @@ import (
 )
 
 var BenchmarksMap = map[string]string{
-	"cis":   "cis_v200",
-	"nist":  "nist_800_171_rev_2",
-	"pci":   "pci_dss_v321",
-	"gdpr":  "gdpr",
-	"hipaa": "hipaa_final_omnibus_security_rule_2013",
-	"soc_2": "soc_2",
-	//"aws-foundational-security": "foundational_security",
+	"cis":                       "cis_v200",
+	"nist":                      "nist_800_171_rev_2",
+	"pci":                       "pci_dss_v321",
+	"gdpr":                      "gdpr",
+	"hipaa":                     "hipaa_final_omnibus_security_rule_2013",
+	"soc_2":                     "soc_2",
+	"aws_foundational_security": "foundational_security",
 }
 
 var bLock sync.Mutex
@@ -37,6 +37,7 @@ type Benchmark struct {
 type Control struct {
 	CategoryBreadcrumb      string            `json:"category_breadcrumb"`
 	CategoryHierarchy       []string          `json:"category_hierarchy"`
+	CategoryHierarchyShort  string            `json:"category_hierarchy_short"`
 	ControlId               string            `json:"control_id"`
 	Description             string            `json:"description"`
 	Title                   string            `json:"title"`
@@ -65,18 +66,23 @@ func main() {
 	}
 
 	for benchmarkName, benchmark := range rMaps.Benchmarks {
+
 		benchmarkProcessingNeeded := false
 		benchmarkFilename := benchmarkName
+
 		for filename, benchmarkToBeParsed := range BenchmarksMap {
 			if benchmarkName == fmt.Sprintf("aws_compliance.benchmark.%s", benchmarkToBeParsed) {
 				benchmarkProcessingNeeded = true
 				benchmarkFilename = filename
 			}
 		}
+
 		if !benchmarkProcessingNeeded {
 			continue
 		}
+
 		var controlList []Control
+
 		benchmarkList := []Benchmark{
 			{
 				BenchmarkId:   benchmarkName,
@@ -87,7 +93,15 @@ func main() {
 				Children:      benchmark.ChildNameStrings,
 			},
 		}
-		iterateOverChildren(benchmark, []string{benchmark.GetTitle()}, &benchmarkList, &controlList, []string{benchmarkName})
+
+		iterateOverChildren(
+			benchmark,
+			[]string{benchmark.GetTitle()},
+			&benchmarkList,
+			&controlList,
+			[]string{benchmarkName},
+		)
+
 		k, _ := json.MarshalIndent(benchmarkList, "", "  ")
 		s, _ := json.MarshalIndent(controlList, "", "  ")
 		err := os.WriteFile(fmt.Sprintf("%s/%s_benchmarks.json", cwd, benchmarkFilename), k, 0644)
@@ -101,45 +115,98 @@ func main() {
 	}
 }
 
-func iterateOverChildren(benchmark *modconfig.Benchmark, benchmarkHierarchy []string, benchmarkList *[]Benchmark,
-	controlList *[]Control, controlIdHierarchy []string) {
+func iterateOverChildren(
+	benchmark *modconfig.Benchmark,
+	benchmarkHierarchy []string,
+	benchmarkList *[]Benchmark,
+	controlList *[]Control,
+	controlIdHierarchy []string,
+) {
+
 	categoryBreadcrumb := strings.Join(benchmarkHierarchy, " > ")
 	controlBreadcrumb := strings.Join(controlIdHierarchy, "/")
-	for _, benchmarkChild := range benchmark.GetChildren() {
-		fmt.Printf("%s %s -> %s %d\n", benchmark.BlockType(), benchmark.Name(), benchmarkChild.Name(), len(benchmarkChild.GetChildren()))
-		if benchmarkChild.Name() == "aws_compliance.control.iam_account_password_policy_min_length_14" {
-			fmt.Printf("OutPrint %s \t %s -> %+v \t %+v\n", categoryBreadcrumb, controlBreadcrumb, benchmarkHierarchy, controlIdHierarchy)
+	for _, child := range benchmark.GetChildren() {
+		fmt.Printf("%s %s -> %s %d\n",
+			benchmark.BlockType(), benchmark.Name(), child.Name(), len(child.GetChildren()))
+		if child.Name() == "aws_compliance.control.iam_account_password_policy_min_length_14" {
+			fmt.Printf("OutPrint %s \t %s -> %+v \t %+v\n",
+				categoryBreadcrumb, controlBreadcrumb, benchmarkHierarchy, controlIdHierarchy)
 		}
-		if benchmarkChild.BlockType() == modconfig.BlockTypeBenchmark && len(benchmarkChild.GetChildren()) > 0 {
+		if child.BlockType() == modconfig.BlockTypeBenchmark && len(child.GetChildren()) > 0 {
 			benchmarkParent := Benchmark{
-				BenchmarkId:   benchmarkChild.Name(),
-				Description:   benchmarkChild.GetDescription(),
-				Title:         benchmarkChild.GetTitle(),
-				Tags:          benchmarkChild.GetTags(),
-				Documentation: benchmarkChild.GetDocumentation(),
-				Children:      benchmarkChild.(*modconfig.Benchmark).ChildNameStrings,
+				BenchmarkId:   child.Name(),
+				Description:   child.GetDescription(),
+				Title:         child.GetTitle(),
+				Tags:          child.GetTags(),
+				Documentation: child.GetDocumentation(),
+				Children:      child.(*modconfig.Benchmark).ChildNameStrings,
 			}
 			bLock.Lock()
 			*benchmarkList = append(*benchmarkList, benchmarkParent)
 			bLock.Unlock()
-			iterateOverChildren(benchmarkChild.(*modconfig.Benchmark), append(benchmarkHierarchy,
-				benchmarkChild.GetTitle()), benchmarkList, controlList, append(controlIdHierarchy, benchmarkChild.Name()))
+			iterateOverChildren(
+				child.(*modconfig.Benchmark),
+				append(benchmarkHierarchy, child.GetTitle()),
+				benchmarkList,
+				controlList,
+				append(controlIdHierarchy, child.Name()),
+			)
 		} else {
 			control := Control{
-				Title:                   benchmarkChild.GetTitle(),
-				Description:             benchmarkChild.GetDescription(),
+				Title:                   child.GetTitle(),
+				Description:             child.GetDescription(),
 				CategoryBreadcrumb:      categoryBreadcrumb,
 				CategoryHierarchy:       strings.Split(categoryBreadcrumb, " > "),
-				ControlId:               benchmarkChild.Name(),
-				Tags:                    benchmarkChild.GetTags(),
-				Documentation:           benchmarkChild.GetDocumentation(),
+				ControlId:               child.Name(),
+				Tags:                    child.GetTags(),
+				Documentation:           child.GetDocumentation(),
 				ParentControlHierarchy:  strings.Split(controlBreadcrumb, "/"),
 				ParentControlBreadcrumb: controlBreadcrumb,
-				Executable:              strings.HasPrefix(strings.Split(benchmarkChild.Name(), ".")[len(strings.Split(benchmarkChild.Name(), "."))-1], strings.Split(benchmark.Name(), ".")[len(strings.Split(benchmark.Name(), "."))-1]),
+				Executable: strings.HasPrefix(
+					strings.Split(child.Name(), ".")[len(strings.Split(child.Name(), "."))-1],
+					strings.Split(benchmark.Name(), ".")[len(strings.Split(benchmark.Name(), "."))-1]),
 			}
+
+			control.SetCategoryHierarchyShort()
 			cLock.Lock()
 			*controlList = append(*controlList, control)
 			cLock.Unlock()
 		}
 	}
+}
+
+func (c *Control) SetCategoryHierarchyShort() {
+	bmType := c.CategoryHierarchy[0]
+
+	switch {
+	case strings.Contains(bmType, "CIS v2.0.0"):
+		c.CategoryHierarchyShort = fmt.Sprintf("CIS v2.0.0 - %s", c.Tags["cis_item_id"])
+
+	case strings.Contains(bmType, "NIST 800-171 Revision 2"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("NIST 800-171 Rev 2 - %s", strings.TrimSuffix(controlNum[0], "."))
+
+	case strings.Contains(bmType, "PCI DSS v3.2.1"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("PCI DSS v3.2.1 - %s", controlNum[0])
+
+	case strings.Contains(bmType, "General Data Protection Regulation (GDPR)"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("GDPR - %s", strings.Join(controlNum[:2], " "))
+
+	case strings.Contains(bmType, "HIPAA Final Omnibus Security Rule 2013"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("HIPPA - %s", controlNum[0])
+
+	case strings.Contains(bmType, "SOC 2"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("SOC 2 - %s", controlNum[0])
+
+	case strings.Contains(bmType, "AWS Foundational Security Best Practices"):
+		c.CategoryHierarchyShort = fmt.Sprintf("AWS - %s", c.CategoryHierarchy[len(c.CategoryHierarchy)-1])
+
+	default:
+		c.CategoryHierarchyShort = ""
+	}
+
 }
