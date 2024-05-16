@@ -170,7 +170,7 @@ func (c *Control) SetCategoryHierarchyShort() {
 
 	switch {
 	case strings.Contains(bmType, "NSA and CISA Kubernetes Hardening Guidance v1.0"):
-		c.CategoryHierarchyShort = fmt.Sprintf("NSA - CISA - %s", c.CategoryHierarchy[len(c.CategoryHierarchy)-1])
+		c.CategoryHierarchyShort = fmt.Sprintf("NSA-CISA - %s", c.CategoryHierarchy[len(c.CategoryHierarchy)-1])
 
 	default:
 		c.CategoryHierarchyShort = ""
