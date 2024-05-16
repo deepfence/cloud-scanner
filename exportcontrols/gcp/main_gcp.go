@@ -31,6 +31,7 @@ type Benchmark struct {
 type Control struct {
 	CategoryBreadcrumb      string            `json:"category_breadcrumb"`
 	CategoryHierarchy       []string          `json:"category_hierarchy"`
+	CategoryHierarchyShort  string            `json:"category_hierarchy_short"`
 	ControlId               string            `json:"control_id"`
 	Description             string            `json:"description"`
 	Title                   string            `json:"title"`
@@ -81,7 +82,15 @@ func main() {
 				Children:      benchmark.ChildNameStrings,
 			},
 		}
-		iterateOverChildren(benchmark, []string{benchmark.GetTitle()}, &benchmarkList, &controlList, []string{benchmarkName})
+
+		iterateOverChildren(
+			benchmark,
+			[]string{benchmark.GetTitle()},
+			&benchmarkList,
+			&controlList,
+			[]string{benchmarkName},
+		)
+
 		k, _ := json.MarshalIndent(benchmarkList, "", "  ")
 		s, _ := json.MarshalIndent(controlList, "", "  ")
 		err := os.WriteFile(fmt.Sprintf("%s/%s_benchmarks.json", cwd, benchmarkFilename), k, 0644)
@@ -95,8 +104,13 @@ func main() {
 	}
 }
 
-func iterateOverChildren(benchmark *modconfig.Benchmark, benchmarkHierarchy []string, benchmarkList *[]Benchmark,
-	controlList *[]Control, controlIdHierarchy []string) {
+func iterateOverChildren(
+	benchmark *modconfig.Benchmark,
+	benchmarkHierarchy []string,
+	benchmarkList *[]Benchmark,
+	controlList *[]Control,
+	controlIdHierarchy []string,
+) {
 	categoryBreadcrumb := strings.Join(benchmarkHierarchy, " > ")
 	controlBreadcrumb := strings.Join(controlIdHierarchy, "/")
 	for _, benchmarkChild := range benchmark.GetChildren() {
@@ -112,8 +126,12 @@ func iterateOverChildren(benchmark *modconfig.Benchmark, benchmarkHierarchy []st
 			bLock.Lock()
 			*benchmarkList = append(*benchmarkList, benchmarkParent)
 			bLock.Unlock()
-			iterateOverChildren(benchmarkChild.(*modconfig.Benchmark), append(benchmarkHierarchy,
-				benchmarkChild.GetTitle()), benchmarkList, controlList, append(controlIdHierarchy, benchmarkChild.Name()))
+			iterateOverChildren(
+				benchmarkChild.(*modconfig.Benchmark),
+				append(benchmarkHierarchy, benchmarkChild.GetTitle()),
+				benchmarkList, controlList,
+				append(controlIdHierarchy, benchmarkChild.Name()),
+			)
 		} else {
 			control := Control{
 				Title:                   benchmarkChild.GetTitle(),
@@ -125,11 +143,29 @@ func iterateOverChildren(benchmark *modconfig.Benchmark, benchmarkHierarchy []st
 				Documentation:           benchmarkChild.GetDocumentation(),
 				ParentControlHierarchy:  strings.Split(controlBreadcrumb, "/"),
 				ParentControlBreadcrumb: controlBreadcrumb,
-				Executable:              strings.HasPrefix(strings.Split(benchmarkChild.Name(), ".")[len(strings.Split(benchmarkChild.Name(), "."))-1], strings.Split(benchmark.Name(), ".")[len(strings.Split(benchmark.Name(), "."))-1]),
+				Executable: strings.HasPrefix(
+					strings.Split(benchmarkChild.Name(), ".")[len(strings.Split(benchmarkChild.Name(), "."))-1],
+					strings.Split(benchmark.Name(), ".")[len(strings.Split(benchmark.Name(), "."))-1],
+				),
 			}
+			control.SetCategoryHierarchyShort()
+
 			cLock.Lock()
 			*controlList = append(*controlList, control)
 			cLock.Unlock()
 		}
 	}
+}
+
+func (c *Control) SetCategoryHierarchyShort() {
+	bmType := c.CategoryHierarchy[0]
+
+	switch {
+	case strings.Contains(bmType, "CIS v2.0.0"):
+		c.CategoryHierarchyShort = fmt.Sprintf("CIS v2.0.0 - %s", c.Tags["cis_item_id"])
+
+	default:
+		c.CategoryHierarchyShort = ""
+	}
+
 }
