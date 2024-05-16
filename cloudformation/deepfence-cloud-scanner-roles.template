@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deepfence Cloud Scanner ReadOnly Roles Deployment - AWS
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: Deepfence Configuration
+      Parameters:
+      - CloudScannerAccountId
+      - ParentStackName
+    ParameterLabels:
+      CloudScannerAccountId:
+        default: >-
+          Cloud Scanner Account Id. Id of Account where Deepfence Cloud Scanner
+          is deployed. Example: 123456789012
+Parameters:
+  CloudScannerAccountId:
+    Type: String
+  ParentStackName:
+    Type: String
+Resources:
+  ReadOnlyRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Path: /
+      RoleName: !Join
+      - ''
+      - - !Ref ParentStackName
+        - '-mem-acc-read-only-access'
+      AssumeRolePolicyDocument: !Join
+      - ''
+      - - >-
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["arn:aws:iam::
+        - !Ref CloudScannerAccountId
+        - ':role/'
+        - !Join
+          - ''
+          - - !Ref ParentStackName
+            - OrgRole
+        - '"]},"Action":"sts:AssumeRole"}]}'
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - 'arn:aws:iam::aws:policy/SecurityAudit'
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ''
+        - - !Ref ParentStackName
+          - '-mem-acc-read-only-access'
