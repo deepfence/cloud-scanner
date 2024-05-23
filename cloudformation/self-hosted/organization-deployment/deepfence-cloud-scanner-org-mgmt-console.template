@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Deepfence Cloud Scanner - AWS
+Description: Deepfence Cloud Scanner Organization Deployment - AWS
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
@@ -10,19 +10,24 @@ Metadata:
       - ManagementConsolePort
       - DeepfenceKey
       - CloudScannerImage
-      - DebugLogs
+      - LogLevel
+      - OrgAccId
+      - SuccessSignalUrl
+      - ParentStackName
     - Label:
         default: Cluster Configuration
       Parameters:
-      - Cluster
+      - ClusterName
     - Label:
-        default: VPC Configuration
+        default: Create New VPC
       Parameters:
       - VPCName
       - VPCCIDR
       - SubnetCIDR
     - Label:
-        default: Use Existing VPC (Optional)
+        default: >-
+          Use Existing VPC (Optional, Target Member AWS Account ID must be
+          set)
       Parameters:
       - VPC
       - VPCSubnet
@@ -44,10 +49,10 @@ Metadata:
         default: Deepfence API Key
       CloudScannerImage:
         default: Cloud Scanner Image
-      Cluster:
+      LogLevel:
+        default: Log level
+      ClusterName:
         default: ECS Cluster Name
-      DebugLogs:
-        default: Enable Debug Logs
       VPCName:
         default: VPC Name
       VPC:
@@ -60,15 +65,21 @@ Metadata:
         default: Cloud Scanner VPC CIDR Block
       SubnetCIDR:
         default: Cloud Scanner Subnet CIDR Block
+      OrgAccId:
+        default: Organization Management Account Id
+      SuccessSignalUrl:
+        default: URL to send notification for successful deployment of ECS Task
+      ParentStackName:
+        default: Parent Stack Name
       TaskIAMRole:
         default: >-
           If SecurityAudit role is chosen, cloud scanner may not find
           configuration issues in some of the AWS resources like WAF.
           Also updates will happen only once every day.
       TaskCPU:
-        default: 'Task CPU Units (Default: 4 vCPU)'
+        default: 'Task CPU Units (Default: 8 vCPU)'
       TaskMemory:
-        default: 'Task Memory (Default: 8 GB)'
+        default: 'Task Memory (Default: 16 GB)'
       TaskEphemeralStorage:
         default: 'Task Ephemeral Storage (Default: 100 GB)'
       CloudTrailTrails:
@@ -85,13 +96,7 @@ Parameters:
   CloudScannerImage:
     Default: 'quay.io/deepfenceio/cloud-scanner:2.2.0'
     Type: String
-  DebugLogs:
-    Default: 'false'
-    Type: String
-    AllowedValues:
-    - 'true'
-    - 'false'
-  Cluster:
+  ClusterName:
     Default: deepfence-cloud-scanner
     Type: String
     Description: Name of Cloud Scanner ECS cluster
@@ -118,6 +123,21 @@ Parameters:
   IG:
     Type: String
     Description: Internet Gateway within existing VPC to connect to internet
+  OrgAccId:
+    Type: String
+  LogLevel:
+    Default: 'info'
+    Type: String
+    AllowedValues:
+    - 'error'
+    - 'warn'
+    - 'info'
+    - 'debug'
+    - 'trace'
+  SuccessSignalUrl:
+    Type: String
+  ParentStackName:
+    Type: String
   TaskIAMRole:
     Type: String
     Description: Task Role
@@ -128,11 +148,11 @@ Parameters:
   TaskCPU:
     Type: String
     Description: Task CPU Units
-    Default: '4096'
+    Default: '8192'
   TaskMemory:
     Type: String
     Description: Task Memory (MB)
-    Default: '8192'
+    Default: '16384'
   TaskEphemeralStorage:
     Type: String
     Description: Ephemeral Storage (GB)
@@ -220,20 +240,20 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: deepfence-cloud-scanner-ecs
-      VpcId: !If [CreateNewVPC, !Ref CloudScannerVPC, !Ref VPC]
+      VpcId: !If [ CreateNewVPC, !Ref CloudScannerVPC, !Ref VPC ]
       SecurityGroupEgress:
       - IpProtocol: "-1"
         CidrIp: "0.0.0.0/0"
       Tags:
       - Key: Name
-        Value: !Ref Cluster
+        Value: !Ref ClusterName
   ECSCluster:
     Type: 'AWS::ECS::Cluster'
     Properties:
-      ClusterName: !Ref Cluster
+      ClusterName: !Ref ClusterName
       Tags:
       - Key: Name
-        Value: !Ref Cluster
+        Value: !Ref ClusterName
   CloudScannerLogGroup:
     Type: 'AWS::Logs::LogGroup'
   CloudScannerService:
@@ -266,39 +286,44 @@ Resources:
       SchedulingStrategy: REPLICA
       Tags:
       - Key: Name
-        Value: !Ref Cluster
+        Value: !Ref ClusterName
   CloudScannerTaskDefinition:
     Type: 'AWS::ECS::TaskDefinition'
     Properties:
       ContainerDefinitions:
-      - Command:
-        - '-mode'
-        - service
-        - '-mgmt-console-url'
-        - !Ref ManagementConsoleURL
-        - '-mgmt-console-port'
-        - !Ref ManagementConsolePort
-        - '-deepfence-key'
-        - !Ref DeepfenceKey
-        - '-multiple-acc-ids'
-        - ''
-        - '-org-acc-id'
-        - ''
-        - '-debug'
-        - !Ref DebugLogs
-        - '-cloud-audit-log-ids'
-        - !Ref CloudTrailTrails
-        Essential: true
+      - Essential: true
         Image: !Ref CloudScannerImage
         Environment:
-        - Name: TASK_ROLE
-          Value: !Ref TaskIAMRole
-        - Name: MGMT_CONSOLE_URL 
+        - Name: MGMT_CONSOLE_URL
           Value: !Ref ManagementConsoleURL
         - Name: MGMT_CONSOLE_PORT
           Value: !Ref ManagementConsolePort
         - Name: DEEPFENCE_KEY
           Value: !Ref DeepfenceKey
+        - Name: CLOUD_PROVIDER
+          Value: "aws"
+        - Name: CLOUD_REGION
+          Value: !Ref 'AWS::Region'
+        - Name: CLOUD_ACCOUNT_ID
+          Value: !Ref OrgAccId
+        - Name: ORGANIZATION_DEPLOYMENT
+          Value: "true"
+        - Name: ROLE_NAME
+          Value: !Ref ParentStackName
+        - Name: AWS_CREDENTIAL_SOURCE
+          Value: "EcsContainer"
+        - Name: CLOUD_AUDIT_LOG_IDS
+          Value: !Ref CloudTrailTrails
+        - Name: HTTP_SERVER_REQUIRED
+          Value: "false"
+        - Name: SUCCESS_SIGNAL_URL
+          Value: !Ref SuccessSignalUrl
+        - Name: LOG_LEVEL
+          Value: !Ref LogLevel
+        - Name: SCAN_INACTIVE_THRESHOLD
+          Value: "21600"
+        - Name: CLOUD_SCANNER_POLICY
+          Value: !Ref TaskIAMRole
         LogConfiguration:
           LogDriver: awslogs
           Options:
@@ -309,7 +334,7 @@ Resources:
       Family: !Join
       - '-'
       - - deepfence
-        - !Ref 'AWS::StackName'
+        - !Ref ParentStackName
       TaskRoleArn: !GetAtt
       - TaskRole
       - Arn
@@ -332,8 +357,8 @@ Resources:
       Path: /
       RoleName: !Join
       - ''
-      - - !Ref 'AWS::StackName'
-        - '-execution-role'
+      - - !Ref ParentStackName
+        - Role
       AssumeRolePolicyDocument: >-
         {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
@@ -343,24 +368,32 @@ Resources:
       - Key: Name
         Value: !Join
         - ''
-        - - !Ref 'AWS::StackName'
-          - '-execution-role'
+        - - !Ref ParentStackName
+          - Role
   TaskRole:
     Type: 'AWS::IAM::Role'
     Properties:
       Path: /
       RoleName: !Join
       - ''
-      - - !Ref 'AWS::StackName'
-        - '-role'
+      - - !Ref ParentStackName
+        - OrgRole
       AssumeRolePolicyDocument: >-
         {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole
+      Policies:
+      - PolicyName: deepfence-cloud-scanner-AllowAssumeRoleInChildAccounts
+        PolicyDocument: !Join
+        - ''
+        - - >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Resource":["arn:aws:iam::*:role/
+          - !Ref ParentStackName
+          - '"],"Action":"sts:AssumeRole"}]}'
       Tags:
       - Key: Name
         Value: !Join
         - ''
-        - - !Ref 'AWS::StackName'
-          - '-role'
+        - - !Ref ParentStackName
+          - OrgRole

@@ -1,0 +1,3 @@
+Check if the pod is running
+
+kubectl get pod --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "deepfence-cloud-scanner.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"

@@ -10,7 +10,7 @@ Metadata:
       - ManagementConsolePort
       - DeepfenceKey
       - CloudScannerImage
-      - DebugLogs
+      - LogLevel
     - Label:
         default: Cluster Configuration
       Parameters:
@@ -47,8 +47,8 @@ Metadata:
         default: Deepfence API Key
       CloudScannerImage:
         default: Cloud Scanner Image
-      DebugLogs:
-        default: Enable Debug Logs
+      LogLevel:
+        default: Log level
       TargetAWSAccountID:
         default: Target Member AWS Account ID
       ClusterName:
@@ -90,12 +90,15 @@ Parameters:
   CloudScannerImage:
     Default: 'quay.io/deepfenceio/cloud-scanner:2.2.0'
     Type: String
-  DebugLogs:
-    Default: 'false'
+  LogLevel:
+    Default: 'info'
     Type: String
     AllowedValues:
-    - 'true'
-    - 'false'
+    - 'error'
+    - 'warn'
+    - 'info'
+    - 'debug'
+    - 'trace'
   TargetAWSAccountID:
     Type: String
     Description: >-
@@ -316,8 +319,8 @@ Resources:
         ParameterValue: !Ref DeepfenceKey
       - ParameterKey: CloudScannerImage
         ParameterValue: !Ref CloudScannerImage
-      - ParameterKey: DebugLogs
-        ParameterValue: !Ref DebugLogs
+      - ParameterKey: LogLevel
+        ParameterValue: !Ref LogLevel
       - ParameterKey: ClusterName
         ParameterValue: !Ref ClusterName
       - ParameterKey: VPCName
@@ -332,10 +335,6 @@ Resources:
         ParameterValue: !Ref SubnetCIDR
       - ParameterKey: IG
         ParameterValue: !Ref IG
-      - ParameterKey: OrgMembers
-        ParameterValue: !GetAtt
-        - OrgAccIds
-        - Members
       - ParameterKey: OrgAccId
         ParameterValue: !Ref 'AWS::AccountId'
       - ParameterKey: SuccessSignalUrl
@@ -371,7 +370,7 @@ Resources:
       - - !Ref 'AWS::StackName'
         - OrgDeployment
       TemplateURL: >-
-        https://deepfence-public.s3.amazonaws.com/cloud-scanner/deepfence-cloud-scanner-org-mgmt-console.template
+        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-org-mgmt-console.template
   CloudScannerDeploymentComplete:
     Type: 'AWS::CloudFormation::WaitConditionHandle'
   CloudScannerDeploymentCompleteWait:
@@ -404,6 +403,8 @@ Resources:
         - DeploymentAccountId
       - ParameterKey: ParentStackName
         ParameterValue: !Ref 'AWS::StackName'
+      - ParameterKey: TaskIAMRole
+        ParameterValue: !Ref TaskIAMRole
       PermissionModel: SERVICE_MANAGED
       StackInstancesGroup:
       - DeploymentTargets:
@@ -426,4 +427,4 @@ Resources:
       - - !Ref 'AWS::StackName'
         - Roles
       TemplateURL: >-
-        https://deepfence-public.s3.amazonaws.com/cloud-scanner/deepfence-cloud-scanner-roles.template
+        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-roles.template

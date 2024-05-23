@@ -8,16 +8,29 @@ Metadata:
       Parameters:
       - CloudScannerAccountId
       - ParentStackName
+      - TaskIAMRole
     ParameterLabels:
       CloudScannerAccountId:
         default: >-
           Cloud Scanner Account Id. Id of Account where Deepfence Cloud Scanner
           is deployed. Example: 123456789012
+      TaskIAMRole:
+        default: >-
+          If SecurityAudit role is chosen, cloud scanner may not find
+          configuration issues in some of the AWS resources like WAF.
+          Also updates will happen only once every day.
 Parameters:
   CloudScannerAccountId:
     Type: String
   ParentStackName:
     Type: String
+  TaskIAMRole:
+    Type: String
+    Description: Task Role
+    Default: 'arn:aws:iam::aws:policy/SecurityAudit'
+    AllowedValues:
+    - 'arn:aws:iam::aws:policy/SecurityAudit'
+    - 'arn:aws:iam::aws:policy/ReadOnlyAccess'
 Resources:
   ReadOnlyRole:
     Type: 'AWS::IAM::Role'
@@ -26,7 +39,6 @@ Resources:
       RoleName: !Join
       - ''
       - - !Ref ParentStackName
-        - '-mem-acc-read-only-access'
       AssumeRolePolicyDocument: !Join
       - ''
       - - >-
@@ -40,10 +52,10 @@ Resources:
         - '"]},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
-      - 'arn:aws:iam::aws:policy/SecurityAudit'
+      - !Ref TaskIAMRole
+      - arn:aws:iam::aws:policy/AWSOrganizationsReadOnlyAccess
       Tags:
       - Key: Name
         Value: !Join
         - ''
         - - !Ref ParentStackName
-          - '-mem-acc-read-only-access'

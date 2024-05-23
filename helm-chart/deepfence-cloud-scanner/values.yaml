@@ -1,0 +1,101 @@
+# Default values for deepfence-cloud-scanner.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: quay.io/deepfenceio/cloud-scanner
+  pullPolicy: Always
+  tag: "2.3.0-dev"
+
+# Deepfence management console url and port
+# Format: deepfence.customer.com or 123.123.123.123
+managementConsoleUrl: ""
+managementConsolePort: "443"
+managementConsoleUrlScheme: "https"
+
+# Auth: Get Deepfence api key from UI -> Settings -> User Management
+deepfenceKey:
+  # If secret is created outside of this helm chart, set this to false
+  create: true
+  key: ""
+
+cloudAccount:
+  # AWS/GCP/Azure account ID
+  accountID: ""
+  cloudProvider: ""
+  region: ""
+  # Is this organization deployment or single account deployment?
+  isOrganizationDeployment: false
+  # Role name. The name should be same across all accounts in the Organization deployment.
+  # Role ARN example: arn:aws:iam::123456789012:role/deepfence-managed-cloud-scanner-role
+  # Role name in this case is deepfence-managed-cloud-scanner-role
+  roleName: ""
+  # Optional: (Applicable only in AWS)
+  # Policy set for Cloud Scanner in CloudFormation / terraform
+  # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
+  cloudScannerPolicy: ""
+
+# Log level: error/warn/info/debug/trace
+logLevel: info
+
+# Optional: To refresh the cloud resources every hour, provide CloudTrail Trail ARNs (Management events with write-only or read-write).
+# If empty, a trail with management events will be automatically chosen if available.
+cloudAuditLogIDs: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  limits:
+    cpu: 8000m
+    memory: 16384Mi
+  requests:
+    cpu: 500m
+    memory: 1024Mi
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector:
+  kubernetes.io/os: linux
+  kubernetes.io/arch: amd64
+
+tolerations: []
+
+affinity: {}

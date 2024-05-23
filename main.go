@@ -3,50 +3,22 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
+	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
-
 	"github.com/deepfence/cloud-scanner/service"
 	"github.com/deepfence/cloud-scanner/util"
+	"github.com/kelseyhightower/envconfig"
 )
 
 var (
-	CloudScannerSocket    = "/tmp/cloud-scanner.sock"
-	output                = flag.String("output", util.TextOutput, "Output format: json, table or text")
-	benchmark             = flag.String("benchmark", "all", "Benchmarks: cis, gdpr, hipaa, pci, soc2, nist")
-	quiet                 = flag.Bool("quiet", false, "Don't display any output in stdout")
-	socketPath            = flag.String("socket-path", CloudScannerSocket, "Path to socket")
-	managementConsoleUrl  = flag.String("mgmt-console-url", "", "Deepfence Management Console URL")
-	managementConsolePort = flag.Int("mgmt-console-port", 443, "Deepfence Management Console Port")
-	deepfenceKey          = flag.String("deepfence-key", "", "Deepfence key for auth")
-	httpServerRequired    = flag.Bool("http-server-required", false, "HTTP Service required")
-	debug                 = flag.String("debug", "false", "set log level to debug")
-	multipleAccountIds    = flag.String("multiple-acc-ids", "", "List of comma-separated account ids to monitor")
-	orgAccountId          = flag.String("org-acc-id", "", "Account id of parent organization account")
-	rolePrefix            = flag.String("role-prefix", "deepfence-cloud-scanner", "Prefix for role to be assumed in monitored accounts")
-	successSignalUrl      = flag.String("success-signal-url", "", "URL to send notification for successful deployment of ECS Task")
-	cloudAuditLogIDs      = flag.String("cloud-audit-log-ids", "", "Comma separated IDs of CloudTrail/Azure Monitor Logs/Cloud Audit Logs to enable refreshing cloud resources every hour")
-	commaSplitRegex       = regexp.MustCompile(`\s*,\s*`)
-	verbosity             = flag.String("verbose", "info", "log level")
-	inactiveThreshold     = flag.Int("inactive-threshold", 3600, "Threshold for Inactive scan in seconds")
+	socketPath = flag.String("socket-path", "", "Path to socket")
 )
 
 var Version string
 
-func init() {
-	CloudScannerSocket = os.Getenv("DF_INSTALL_DIR") + CloudScannerSocket
-}
-
 func runServices(config util.Config, socketPath *string) {
-	s, err := json.MarshalIndent(config, "", "\t")
-	if err == nil {
-		log.Info().Msgf("Using config: %s", string(s))
-	}
 	svc, err := service.NewComplianceScanService(config, socketPath)
 	if err != nil {
 		log.Error().Msgf("Error: %v", err)
@@ -63,82 +35,68 @@ func main() {
 	log.Info().Msgf("Starting cloud scanner, version: %s", Version)
 	flag.Parse()
 
-	enableDebug := os.Getenv("DF_ENABLE_DEBUG") != ""
-	if enableDebug {
-		verbosity = debug
-	}
-	log.Initialize(*verbosity)
-
-	if *successSignalUrl == "" {
-		*successSignalUrl = os.Getenv("SUCCESS_SIGNAL_URL")
+	if *socketPath == "" {
+		log.Fatal().Msgf("socket-path is not set")
 	}
 
-	if *successSignalUrl != "" {
-		deepfence.SendSuccessfulDeploymentSignal(*successSignalUrl)
+	var config util.Config
+	err := envconfig.Process("", &config)
+	if err != nil {
+		log.Fatal().Msg(err.Error())
 	}
 
-	var cloudAuditLogsIDs []string
-	if *cloudAuditLogIDs == "" {
-		*cloudAuditLogIDs = os.Getenv("CLOUD_AUDIT_LOG_IDS")
+	err = log.Initialize(config.LogLevel)
+	if err != nil {
+		log.Fatal().Msg(err.Error())
 	}
 
-	if *cloudAuditLogIDs != "" {
-		cloudAuditLogsIDs = strings.Split(*cloudAuditLogIDs, ",")
-	}
-
-	if *rolePrefix == "" {
-		*rolePrefix = os.Getenv("ROLE_PREFIX")
-	}
-
-	if !*httpServerRequired {
-		temp := os.Getenv("HTTP_SERVER_REQUIRED")
-		if temp == "true" {
-			*httpServerRequired = true
+	if config.CloudProvider != "" && config.AccountID != "" && config.CloudRegion != "" {
+		config.CloudMetadata = cloudmetadata.CloudMetadata{
+			CloudProvider: config.CloudProvider,
+			ID:            config.AccountID,
+			Region:        config.CloudRegion,
+		}
+	} else {
+		config.CloudMetadata, err = util.GetCloudMetadata()
+		if err != nil {
+			log.Fatal().Msg(err.Error())
+		}
+		config.CloudProvider = config.CloudMetadata.CloudProvider
+		if config.CloudMetadata.ID != "" {
+			config.AccountID = config.CloudMetadata.ID
+		}
+		if config.CloudMetadata.Region != "" {
+			config.CloudRegion = config.CloudMetadata.Region
 		}
 	}
 
-	inactiveThresholdStr := os.Getenv("INACTIVE_THRESHOLD")
-	if inactiveThresholdStr != "" {
-		i, err := strconv.Atoi(inactiveThresholdStr)
-		if err == nil {
-			*inactiveThreshold = i
-		} else {
-			log.Warn().Msgf("Invalid INACTIVE_THRESHOLD, defaulting to: %d", *inactiveThreshold)
+	if config.AccountID == "" {
+		log.Fatal().Msgf("unable to retrieve account ID from metadata service, please set env CLOUD_ACCOUNT_ID")
+	}
+
+	if config.CloudProvider != util.CloudProviderAWS && config.CloudProvider != util.CloudProviderGCP && config.CloudProvider != util.CloudProviderAzure {
+		log.Fatal().Msgf("invalid CLOUD_PROVIDER - should be one of aws, azure, gcp")
+	}
+
+	if config.SuccessSignalUrl != "" {
+		deepfence.SendSuccessfulDeploymentSignal(config.SuccessSignalUrl)
+	}
+
+	switch config.CloudProvider {
+	case util.CloudProviderAWS:
+		if config.AWSCredentialSource != "EcsContainer" && config.AWSCredentialSource != "Ec2InstanceMetadata" && config.AWSCredentialSource != "Environment" {
+			log.Fatal().Msgf("invalid AWS_CREDENTIAL_SOURCE - should be one of EcsContainer, Ec2InstanceMetadata, Environment")
 		}
+	default:
+		config.AWSCredentialSource = ""
 	}
 
-	config := util.Config{
-		Output:                *output,
-		Quiet:                 *quiet,
-		ManagementConsoleUrl:  strings.TrimPrefix(*managementConsoleUrl, "https://"),
-		ManagementConsolePort: strconv.Itoa(*managementConsolePort),
-		DeepfenceKey:          *deepfenceKey,
-		HttpServerRequired:    *httpServerRequired,
-		RolePrefix:            *rolePrefix,
-		CloudAuditLogsIDs:     cloudAuditLogsIDs,
-		InactiveThreshold:     *inactiveThreshold,
-		Version:               Version,
-	}
+	config.NodeID = util.GetNodeId(config.CloudProvider, config.AccountID)
+	config.Version = Version
 
-	log.Info().Msgf("Env variables are:\n%s", strings.Join(os.Environ(), ","))
-
-	if multipleAccountIds == nil || len(*multipleAccountIds) == 0 {
-		*multipleAccountIds = os.Getenv("DF_MULTIPLE_ACC_ID")
-		*orgAccountId = os.Getenv("DF_ORG_ACC_ID")
-	}
-	config.HostId = os.Getenv("DF_HOST_ID")
-	if len(*multipleAccountIds) != 0 {
-		if *orgAccountId == "" {
-			log.Error().Msg("Error: Organization Account ID is mandatory for organization accounts setup")
-			return
-		}
-		config.MultipleAccountIds = commaSplitRegex.Split(*multipleAccountIds, -1)
-		config.OrgAccountId = *orgAccountId
-		config.IsOrganizationDeployment = true
-	}
-	config.ComplianceBenchmark = *benchmark
-	if len(config.ComplianceBenchmark) == 0 {
-		config.ComplianceBenchmark = "all"
+	configJson, err := json.MarshalIndent(config, "", "\t")
+	if err == nil {
+		log.Info().Msgf("Using config: %s", string(configJson))
 	}
 
 	runServices(config, socketPath)

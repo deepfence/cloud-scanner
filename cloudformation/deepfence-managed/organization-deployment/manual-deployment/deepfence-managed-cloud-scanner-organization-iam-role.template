@@ -4,7 +4,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: Task Configuration
+        default: Configuration
       Parameters:
       - TaskIAMRole
       - ParentStackName
@@ -31,7 +31,7 @@ Resources:
       RoleName: !Ref ParentStackName
       AssumeRolePolicyDocument: !Join
       - ''
-      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::070489688603:role/deepfence-managed-cloud-scanner-role"},"Action":"sts:AssumeRole"}]}'
+      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::122565780891:role/EKSNodeIAMRole"},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole

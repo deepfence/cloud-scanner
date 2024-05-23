@@ -5,6 +5,8 @@ VERSION?=`git describe --tags`
 
 .PHONY: bootstrap docker push steampipe-docker steampipe-docker-push
 
+default: docker
+
 bootstrap:
 	git submodule update --init --recursive --remote
 

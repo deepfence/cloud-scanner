@@ -4,7 +4,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: Task Configuration
+        default: Configuration
       Parameters:
       - TaskIAMRole
       - OrganizationalUnitIds
@@ -29,13 +29,12 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       Path: /
-      RoleName:  !Join
+      RoleName: !Join
       - ''
       - - !Ref 'AWS::StackName'
-        - '-root-account'
       AssumeRolePolicyDocument: !Join
       - ''
-      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::070489688603:role/deepfence-managed-cloud-scanner-role"},"Action":"sts:AssumeRole"}]}'
+      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::122565780891:role/EKSNodeIAMRole"},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole
@@ -44,6 +43,7 @@ Resources:
   StackSet:
     Type: AWS::CloudFormation::StackSet
     Properties:
+      Description: 'Deploy IAM role across accounts in the Organization to provide permission to Cloud Scanner'
       AutoDeployment:
         Enabled: true
         RetainStacksOnAccountRemoval: false
@@ -68,4 +68,4 @@ Resources:
         Regions:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
-      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/deepfence-managed/manual-deployment/deepfence-managed-cloud-scanner-organization-iam-role.template
+      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/deepfence-managed/organization-deployment/manual-deployment/deepfence-managed-cloud-scanner-organization-iam-role.template
