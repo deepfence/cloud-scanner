@@ -422,10 +422,10 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 				ScanId:      scanId,
 				ScanService: c,
 			}
-			jobCount.Add(1)
 			go func() {
+				jobCount.Add(1)
+				defer jobCount.Add(-1)
 				scanPool.Process(s)
-				jobCount.Add(-1)
 			}()
 		case ctl.StopCloudComplianceScan:
 			jsonString, _ := json.Marshal(scanDetails.OtherScanDetails)
@@ -446,12 +446,16 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 			}
 		case ctl.RefreshResources:
 			log.Info().Msgf("Received RefreshResources request")
-			go c.queryAndRegisterCloudResources()
+			go func() {
+				jobCount.Add(1)
+				defer jobCount.Add(-1)
+				c.queryAndRegisterCloudResources()
+			}()
 		case ctl.CloudScannerJobCount:
 			count := int(jobCount.Load())
-			log.Debug().Msgf("Cloud scanner job count: %d", jobCount)
-			data := []byte(string(strconv.Itoa(count)))
-			_, err = conn.Write(data)
+			log.Debug().Msgf("Cloud scanner job count: %d", jobCount.Load())
+			data := strconv.Itoa(count)
+			_, err = conn.Write([]byte(data))
 			if err != nil {
 				log.Error().Msgf("Error writing job count to unix connection: %+v", err)
 			}
