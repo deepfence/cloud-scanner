@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	cloud_metadata "github.com/deepfence/cloud-scanner/cloud-metadata"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
 	"github.com/deepfence/cloud-scanner/util"
 	_ "github.com/lib/pq"
-	"github.com/rs/zerolog/log"
 )
 
 type CloudResourceInfo struct {
@@ -71,15 +70,15 @@ func clearPostgresqlCache() error {
 	return nil
 }
 
-func QueryAndRegisterResources(config util.Config, client *deepfence.Client) []error {
+func QueryAndRegisterResources(config util.Config, client *deepfence.Client, organizationAccountIDs []string) []error {
 	err := clearPostgresqlCache()
 	if err != nil {
 		log.Warn().Msgf("failed to clear postgresql cache: " + err.Error())
 	}
 	log.Info().Msg("QueryAndRegisterResources after clearPostgresqlCache")
 	var accountsToScan []string
-	if len(config.MultipleAccountIds) > 0 {
-		accountsToScan = config.MultipleAccountIds
+	if len(organizationAccountIDs) > 0 {
+		accountsToScan = organizationAccountIDs
 	}
 	if !util.InSlice(config.CloudMetadata.ID, accountsToScan) {
 		accountsToScan = append(accountsToScan, config.CloudMetadata.ID)
@@ -154,12 +153,19 @@ func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, confi
 	var cloudResources = make([]map[string]interface{}, 0)
 
 	log.Debug().Msgf("Querying resources for %s", cloudResourceInfo.Table)
-	query := "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + cloudResourceInfo.Table + " \""
-	if accountId != config.CloudMetadata.ID {
+
+	var query string
+	switch config.CloudProvider {
+	case util.CloudProviderAWS:
 		query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from aws_" + accountId + "." + cloudResourceInfo.Table + " \""
-	}
-	if config.CloudProvider == cloud_metadata.CloudProviderGCP && len(config.MultipleAccountIds) > 0 {
-		query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from gcp_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
+	case util.CloudProviderGCP:
+		if config.IsOrganizationDeployment {
+			query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from gcp_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
+		} else {
+			query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + cloudResourceInfo.Table + " \""
+		}
+	default:
+		query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + cloudResourceInfo.Table + " \""
 	}
 
 	var stdOut []byte

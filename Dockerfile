@@ -2,7 +2,7 @@ ARG DF_IMG_TAG=latest
 ARG IMAGE_REPOSITORY=deepfenceio
 FROM $IMAGE_REPOSITORY/steampipe:$DF_IMG_TAG AS steampipe
 
-FROM golang:1.21-bookworm AS build
+FROM golang:1.22-bookworm AS build
 ARG VERSION=latest
 
 WORKDIR /home/deepfence/src/cloud_scanner

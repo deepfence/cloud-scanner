@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/rs/zerolog/log"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 )
 
 type OutputFile struct {

@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/util"
-	"github.com/rs/zerolog/log"
 )
 
 func GetSupportedAwsRegions() []string {
@@ -19,17 +19,9 @@ func GetSupportedAwsRegions() []string {
 func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 	var query string
 	if len(config.CloudAuditLogsIDs) == 0 {
-		if config.IsOrganizationDeployment {
-			query = "steampipe query --output json \"select * from aws_" + config.OrgAccountId + ".aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true\""
-		} else {
-			query = "steampipe query --output json \"select * from aws_cloudtrail_trail\""
-		}
+		query = "steampipe query --output json \"select * from aws_" + config.AccountID + ".aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true\""
 	} else {
-		if config.IsOrganizationDeployment {
-			query = "steampipe query --output json \"select * from aws_all.aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true and arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
-		} else {
-			query = "steampipe query --output json \"select * from aws_cloudtrail_trail where arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
-		}
+		query = "steampipe query --output json \"select * from aws_all.aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true and arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
 	}
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()

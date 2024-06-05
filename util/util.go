@@ -1,15 +1,14 @@
 package util
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
 	"os/exec"
 	"time"
 
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	cloud_metadata "github.com/deepfence/cloud-scanner/cloud-metadata"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -64,23 +63,15 @@ func GetNodeId(cloudProvider string, accountId string) string {
 	return fmt.Sprintf("%s-%s-%s", NodeTypeCloudAccount, cloudProvider, accountId)
 }
 
-var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var randomLetters = []rune("abcdefghijklmnopqrstuvwxyz")
 
-func RandomStringWithCharset(length int, charset string) string {
-	b := make([]byte, length)
+func RandomString(n int) string {
+	randomGenerator := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]rune, n)
 	for i := range b {
-		b[i] = charset[seededRand.Intn(len(charset))]
+		b[i] = randomLetters[randomGenerator.Intn(len(randomLetters))]
 	}
 	return string(b)
-}
-
-func RandomString(length int) string {
-	return RandomStringWithCharset(length, charset)
-}
-
-func PrintJSON(d interface{}) string {
-	s, _ := json.Marshal(d)
-	return string(s)
 }
 
 func InSlice[T comparable](e T, s []T) bool {

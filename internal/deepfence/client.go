@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/controls"
-	"github.com/rs/zerolog/log"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 
 	"github.com/deepfence/cloud-scanner/util"
 	"github.com/google/uuid"
@@ -59,89 +59,6 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func convertSliceType[T any, Y any](input []T) ([]Y, error) {
-	var res []Y
-	docBytes, err := json.Marshal(input)
-	if err != nil {
-		log.Error().Msgf(err.Error())
-		return res, err
-	}
-	json.Unmarshal(docBytes, &res)
-	return res, nil
-}
-
-func convertType[T any, Y any](input T) (Y, error) {
-	var res Y
-	docBytes, err := json.Marshal(input)
-	if err != nil {
-		log.Error().Msgf(err.Error())
-		return res, err
-	}
-	json.Unmarshal(docBytes, &res)
-	return res, nil
-}
-
-func (c *Client) IngestComplianceResults(complianceDocs []util.ComplianceDoc) error {
-	log.Debug().Msgf("Number of docs to ingest: %d", len(complianceDocs))
-	chunkSize := 200
-	req := c.client.Client().CloudScannerAPI.IngestCloudCompliances(context.Background())
-	for i := 0; i < len(complianceDocs); i += chunkSize {
-		end := i + chunkSize
-		// check to avoid slicing beyond slice capacity
-		if end > len(complianceDocs) {
-			end = len(complianceDocs)
-		}
-		chunk := complianceDocs[i:end]
-
-		out, err := convertSliceType[util.ComplianceDoc, client.IngestersCloudCompliance](chunk)
-		if err != nil {
-			return err
-		}
-
-		req = req.IngestersCloudCompliance(out)
-		_, err = c.client.Client().CloudScannerAPI.IngestCloudCompliancesExecute(req)
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-type IngestersComplianceStats struct {
-	Alarm                int32   `json:"alarm,omitempty"`
-	CompliancePercentage float32 `json:"compliance_percentage,omitempty"`
-	Error                int32   `json:"error,omitempty"`
-	Info                 int32   `json:"info,omitempty"`
-	Ok                   int32   `json:"ok,omitempty"`
-	Skip                 int32   `json:"skip,omitempty"`
-}
-
-type CloudComplianceScanStatus struct {
-	ScanId               string                   `json:"scan_id"`
-	ScanMessage          string                   `json:"scan_message"`
-	ScanStatus           string                   `json:"scan_status"`
-	NodeId               string                   `json:"node_id"`
-	ComplianceCheckTypes []string                 `json:"compliance_check_types"`
-	Result               IngestersComplianceStats `json:"result"`
-	TotalChecks          int32                    `json:"total_checks"`
-	Type                 string                   `json:"type"`
-}
-
-func (c *Client) SendScanStatusToConsole(ccstatus CloudComplianceScanStatus) error {
-
-	req := c.client.Client().CloudScannerAPI.IngestCloudComplianceScanStatus(context.Background())
-	out, err := convertType[CloudComplianceScanStatus, client.IngestersCloudComplianceScanStatus](ccstatus)
-	if err != nil {
-		return err
-	}
-
-	req = req.IngestersCloudComplianceScanStatus([]client.IngestersCloudComplianceScanStatus{out})
-	_, err = c.client.Client().CloudScannerAPI.IngestCloudComplianceScanStatusExecute(req)
-
-	return err
-}
-
 func (c *Client) RegisterCloudAccount(hostId, cloudProvider, cloudMetaId string,
 	multiIds []string, orgId *string, version string) error {
 
@@ -177,7 +94,7 @@ func (c *Client) RegisterCloudAccount(hostId, cloudProvider, cloudMetaId string,
 		)
 	}
 
-	log.Info().Msgf("Before CloudNodesAPI.RegisterCloudNodeAccountExecute")
+	log.Debug().Msgf("Before CloudNodesAPI.RegisterCloudNodeAccountExecute")
 	out, _, err := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccountExecute(req)
 	if err != nil {
 		log.Error().Msgf("Request errored on registering on management console: %s", err.Error())

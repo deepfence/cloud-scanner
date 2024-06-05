@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/util"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -28,12 +28,7 @@ var (
 	RegionStartAfterMap     = make(map[string]map[string]time.Time, len(GetSupportedAwsRegions()))
 	regionStartAfterMapLock sync.RWMutex
 	ErrNoCloudTrailsFound   = errors.New("no cloudtrails found with management events and write or read-write mode")
-	IAMPermissionsSet       bool
 )
-
-func init() {
-	IAMPermissionsSet = os.Getenv("TASK_ROLE") == TaskRoleReadOnly
-}
 
 type CloudResourceChangesAWS struct {
 	config           util.Config
@@ -41,7 +36,7 @@ type CloudResourceChangesAWS struct {
 }
 
 func NewCloudResourcesChangesAWS(config util.Config) (*CloudResourceChangesAWS, error) {
-	if !IAMPermissionsSet {
+	if config.CloudScannerPolicy != TaskRoleReadOnly {
 		log.Warn().Msg("Task role is not set to arn:aws:iam::aws:policy/ReadOnlyAccess. Disabling CloudTrail based updates of cloud resources.")
 		return &CloudResourceChangesAWS{
 			config:           config,
@@ -97,10 +92,7 @@ func (c *CloudResourceChangesAWS) GetResourceTypesToRefresh() (map[string][]stri
 }
 
 func (c *CloudResourceChangesAWS) getS3Region(s3BucketName, accountId string) string {
-	query := "steampipe query --output json \"select region from aws_s3_bucket WHERE name LIKE '" + s3BucketName + "' \""
-	if c.config.IsOrganizationDeployment {
-		query = "steampipe query --output json \"select region from aws_" + c.config.OrgAccountId + ".aws_s3_bucket WHERE name LIKE '" + s3BucketName + "' \""
-	}
+	query := "steampipe query --output json \"select region from aws_" + c.config.AccountID + ".aws_s3_bucket WHERE name LIKE '" + s3BucketName + "' \""
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()
 	s3Region := "us-east-1"
@@ -158,24 +150,15 @@ func (c *CloudResourceChangesAWS) getCloudTrailLogEventsFromS3Bucket(isOrganizat
 	awsRegions := GetSupportedAwsRegions()
 	today := time.Now()
 	yesterday := time.Now().AddDate(0, 0, -1)
-	var sess *session.Session
-	var err error
 
-	if c.config.IsOrganizationDeployment {
-		sess, err = session.NewSessionWithOptions(session.Options{
-			SharedConfigState: session.SharedConfigEnable,
-			Profile:           "profile_" + c.config.OrgAccountId,
-			Config: aws.Config{
-				CredentialsChainVerboseErrors: aws.Bool(true),
-				Region:                        aws.String(s3Region),
-			},
-		})
-	} else {
-		sess, err = session.NewSession(&aws.Config{
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Profile:           "profile_" + c.config.AccountID,
+		Config: aws.Config{
 			CredentialsChainVerboseErrors: aws.Bool(true),
 			Region:                        aws.String(s3Region),
-		})
-	}
+		},
+	})
 	if err != nil {
 		log.Error().Msgf("NewSession Error: %s", err.Error())
 		return nil

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deepfence-cloud-scanner.fullname" . }}
+  labels:
+    {{- include "deepfence-cloud-scanner.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "deepfence-cloud-scanner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "deepfence-cloud-scanner.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "deepfence-cloud-scanner.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: MGMT_CONSOLE_URL
+            value: "{{ required "managementConsoleUrl is required" .Values.managementConsoleUrl }}"
+          - name: MGMT_CONSOLE_PORT
+            value: "{{ required "managementConsolePort is required" .Values.managementConsolePort }}"
+          - name: DEEPFENCE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "deepfence-cloud-scanner.fullname" . }}-key
+                key: "deepfence-key"
+          - name: CLOUD_PROVIDER
+            value: "{{ .Values.cloudAccount.cloudProvider }}"
+          - name: CLOUD_REGION
+            value: "{{ .Values.cloudAccount.region }}"
+          - name: CLOUD_ACCOUNT_ID
+            value: "{{ .Values.cloudAccount.accountID }}"
+          - name: ORGANIZATION_DEPLOYMENT
+            value: "{{ .Values.cloudAccount.isOrganizationDeployment }}"
+          - name: ROLE_NAME
+            value: "{{ required "cloudAccount.roleName is required" .Values.cloudAccount.roleName }}"
+          - name: AWS_CREDENTIAL_SOURCE
+            value: "Ec2InstanceMetadata"
+          - name: CLOUD_AUDIT_LOG_IDS
+            value: "{{ .Values.cloudAuditLogIDs }}"
+          - name: HTTP_SERVER_REQUIRED
+            value: "false"
+          - name: SUCCESS_SIGNAL_URL
+            value: ""
+          - name: LOG_LEVEL
+            value: "{{ .Values.logLevel }}"
+          - name: SCAN_INACTIVE_THRESHOLD
+            value: "21600"
+          - name: CLOUD_SCANNER_POLICY
+            value: "{{ .Values.cloudAccount.cloudScannerPolicy }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

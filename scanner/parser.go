@@ -25,24 +25,24 @@ func (c *CloudComplianceScan) parseControlResult(complianceDocs *[]util.Complian
 		//}
 	}
 
-	docId := fmt.Sprintf("%x", md5.Sum([]byte(c.config.ScanId+control.ControlID+
+	docId := fmt.Sprintf("%x", md5.Sum([]byte(c.ScanID+control.ControlID+
 		result.Resource+group.Title)))
 	(*complianceSummary)[result.Status][docId] = struct{}{}
 	prefix := ""
-	if c.config.CloudProvider == util.CloudProviderAWS {
+	if c.CloudProvider == util.CloudProviderAWS {
 		prefix = "AWS/"
-	} else if c.config.CloudProvider == util.CloudProviderGCP {
+	} else if c.CloudProvider == util.CloudProviderGCP {
 		prefix = "GCP/"
-	} else if c.config.CloudProvider == util.CloudProviderAzure {
+	} else if c.CloudProvider == util.CloudProviderAzure {
 		prefix = "Azure/"
 	}
 	service := strings.TrimPrefix(control.Tags.Service, prefix)
 	if service == "" {
-		service = c.config.CloudProvider
+		service = c.CloudProvider
 	}
 
-	nodeName := fmt.Sprintf("%s/%s", c.config.CloudProvider, accountId)
-	nodeId := util.GetNodeId(c.config.CloudProvider, accountId)
+	nodeName := fmt.Sprintf("%s/%s", c.CloudProvider, accountId)
+	nodeId := util.GetNodeId(c.CloudProvider, accountId)
 
 	complianceDoc := util.ComplianceDoc{
 		Timestamp: util.GetDatetimeNow(),
@@ -56,10 +56,10 @@ func (c *CloudComplianceScan) parseControlResult(complianceDocs *[]util.Complian
 		Service:             service,
 		Title:               control.Title,
 		ComplianceCheckType: group.ComplianceType,
-		CloudProvider:       c.config.CloudProvider,
+		CloudProvider:       c.CloudProvider,
 		NodeName:            nodeName,
 		NodeID:              nodeId,
-		ScanID:              c.config.ScanId,
+		ScanID:              c.ScanID,
 		Type:                util.CloudComplianceScanIndexName,
 		ControlID:           control.ControlID,
 		Description:         control.Description,

@@ -1,19 +1,14 @@
 package util
 
-import cloud_metadata "github.com/deepfence/cloud-scanner/cloud-metadata"
+import (
+	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
+)
 
 const (
 	CloudProviderAWS             = "aws"
 	CloudProviderGCP             = "gcp"
 	CloudProviderAzure           = "azure"
-	ModeCli                      = "cli"
-	ModeService                  = "service"
-	JsonOutput                   = "json"
-	TableOutput                  = "table"
-	TextOutput                   = "text"
-	NodeTypeCloudProvider        = "cloud_provider"
 	NodeTypeCloudAccount         = "cloud-node"
-	charset                      = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	CloudComplianceScanIndexName = "cloud-compliance"
 	StatusAlarm                  = "alarm"
 	StatusOk                     = "ok"
@@ -22,53 +17,48 @@ const (
 	StatusError                  = "error"
 )
 
-var (
-	ComplianceBenchmarks = map[string]map[string]string{
-		CloudProviderAWS: {
-			"cis":   "benchmark.cis_v200",
-			"gdpr":  "benchmark.gdpr",
-			"hipaa": "benchmark.hipaa_final_omnibus_security_rule_2013",
-			"pci":   "benchmark.pci_dss_v321",
-			"soc2":  "benchmark.soc_2",
-			"nist":  "benchmark.nist_800_171_rev_2",
-		},
-		CloudProviderGCP: {
-			"cis": "benchmark.cis_v200",
-		},
-		CloudProviderAzure: {
-			"cis":   "benchmark.cis_v200",
-			"hipaa": "benchmark.hipaa_hitrust_v92",
-			"nist":  "benchmark.nist_sp_800_53_rev_5",
-			"pci":   "benchmark.pci_dss_v321",
-		},
-	}
-)
+//var (
+//	ComplianceBenchmarks = map[string]map[string]string{
+//		CloudProviderAWS: {
+//			"cis":   "benchmark.cis_v200",
+//			"gdpr":  "benchmark.gdpr",
+//			"hipaa": "benchmark.hipaa_final_omnibus_security_rule_2013",
+//			"pci":   "benchmark.pci_dss_v321",
+//			"soc2":  "benchmark.soc_2",
+//			"nist":  "benchmark.nist_800_171_rev_2",
+//		},
+//		CloudProviderGCP: {
+//			"cis": "benchmark.cis_v200",
+//		},
+//		CloudProviderAzure: {
+//			"cis":   "benchmark.cis_v200",
+//			"hipaa": "benchmark.hipaa_hitrust_v92",
+//			"nist":  "benchmark.nist_sp_800_53_rev_5",
+//			"pci":   "benchmark.pci_dss_v321",
+//		},
+//	}
+//)
 
 type Config struct {
-	Mode                     string                       `json:"mode,omitempty"`
-	Output                   string                       `json:"output,omitempty"`
-	FileOutput               string                       `json:"-"`
-	Quiet                    bool                         `json:"quiet,omitempty"`
-	ManagementConsoleUrl     string                       `json:"management_console_url,omitempty"`
-	ManagementConsolePort    string                       `json:"management_console_port,omitempty"`
-	DeepfenceKey             string                       `json:"deepfence_key,omitempty"`
-	ComplianceCheckTypes     []string                     `json:"compliance_check_types,omitempty"`
-	ComplianceBenchmark      string                       `json:"compliance_benchmark,omitempty"`
-	CloudProvider            string                       `json:"cloud_provider,omitempty"`
-	ScanId                   string                       `json:"scan_id,omitempty"`
-	NodeId                   string                       `json:"node_id,omitempty"`
-	HostId                   string                       `json:"host_id,omitempty"`
-	NodeName                 string                       `json:"node_name,omitempty"`
-	CloudMetadata            cloud_metadata.CloudMetadata `json:"cloud_metadata,omitempty"`
-	MultipleAccountIds       []string                     `json:"multiple_account_ids,omitempty"`
-	OrgAccountId             string                       `json:"org_account_id,omitempty"`
-	IsOrganizationDeployment bool                         `json:"is_organization_deployment,omitempty"`
-	RolePrefix               string                       `json:"role_prefix,omitempty"`
-	TableToRefresh           []string                     `json:"table_to_refresh,omitempty"`
-	CloudAuditLogsIDs        []string                     `json:"cloud_audit_logs_ids,omitempty"`
-	InactiveThreshold        int
-	HttpServerRequired       bool
-	Version                  string
+	ManagementConsoleUrl     string   `envconfig:"MGMT_CONSOLE_URL" validate:"required" json:"management_console_url"`
+	ManagementConsolePort    string   `envconfig:"MGMT_CONSOLE_PORT" default:"443" json:"management_console_port"`
+	DeepfenceKey             string   `envconfig:"DEEPFENCE_KEY" validate:"required" json:"-"`
+	CloudProvider            string   `envconfig:"CLOUD_PROVIDER" json:"cloud_provider"`
+	CloudRegion              string   `envconfig:"CLOUD_REGION" json:"cloud_region"`
+	AccountID                string   `envconfig:"CLOUD_ACCOUNT_ID" json:"account_id"`
+	IsOrganizationDeployment bool     `envconfig:"ORGANIZATION_DEPLOYMENT" default:"false" json:"is_organization_deployment"`
+	RoleName                 string   `envconfig:"ROLE_NAME" validate:"required" json:"role_name"`
+	AWSCredentialSource      string   `envconfig:"AWS_CREDENTIAL_SOURCE" json:"aws_credential_source"`
+	CloudAuditLogsIDs        []string `envconfig:"CLOUD_AUDIT_LOG_IDS" json:"cloud_audit_logs_ids"`
+	HttpServerRequired       bool     `envconfig:"HTTP_SERVER_REQUIRED" default:"false" json:"http_server_required"`
+	SuccessSignalUrl         string   `envconfig:"SUCCESS_SIGNAL_URL" json:"success_signal_url"`
+	LogLevel                 string   `envconfig:"LOG_LEVEL" default:"info" json:"log_level"`
+	ScanInactiveThreshold    int      `envconfig:"SCAN_INACTIVE_THRESHOLD" default:"21600" json:"scan_inactive_threshold"`
+	CloudScannerPolicy       string   `envconfig:"CLOUD_SCANNER_POLICY" json:"cloud_scanner_policy"`
+
+	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
+	NodeID        string                      `ignored:"true" json:"-"`
+	Version       string                      `ignored:"true" json:"version"`
 }
 
 type ComplianceDoc struct {
@@ -143,33 +133,7 @@ type ComplianceGroup struct {
 	Controls []ComplianceControl `json:"controls"`
 }
 
-type ScansResponse struct {
-	Data PendingItems `json:"data"`
-}
-
-type PendingScanMap map[string]PendingScan
-
-type PendingItems struct {
-	Scans       PendingScanMap      `json:"scans"`
-	CloudTrails []CloudTrailDetails `json:"cloudtrail_trails"`
-	Refresh     string              `json:"refresh"`
-}
-
 type CloudTrailDetails struct {
 	AccountId string `json:"account_id"`
 	TrailName string `json:"trail_name"`
-}
-
-type Benchmark struct {
-	Id             string   `json:"id"`
-	ComplianceType string   `json:"compliance_type"`
-	Controls       []string `json:"controls"`
-}
-
-type PendingScan struct {
-	ScanId        string      `json:"scan_id"`
-	AccountId     string      `json:"account_id"`
-	ScanTypes     []string    `json:"scan_types"`
-	Benchmarks    []Benchmark `json:"benchmarks"`
-	StopRequested bool        `json:"stop_requested"`
 }

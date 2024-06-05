@@ -13,13 +13,12 @@ import (
 	"sync"
 	"time"
 
-	//"strings"
 	ctl "github.com/deepfence/ThreatMapper/deepfence_utils/controls"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 	"github.com/deepfence/cloud-scanner/output"
 	"github.com/deepfence/cloud-scanner/util"
 	"github.com/deepfence/golang_deepfence_sdk/utils/tasks"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -44,78 +43,35 @@ var (
 )
 
 type CloudComplianceScan struct {
-	config  util.Config
-	scanMap sync.Map
+	scanMap                  sync.Map
+	CloudProvider            string
+	CloudMetadata            cloudmetadata.CloudMetadata
+	AccountID                string
+	IsOrganizationDeployment bool
+	ComplianceCheckTypes     []string
+	ComplianceBenchmark      string
+	ScanID                   string
+	ScanInactiveThreshold    int // Threshold for inactive scan in seconds
 }
 
 func NewCloudComplianceScan(config util.Config) (*CloudComplianceScan, error) {
-	if config.ManagementConsoleUrl == "" {
-		config.ManagementConsoleUrl = os.Getenv("MGMT_CONSOLE_URL")
-	}
-	if config.ManagementConsolePort == "" {
-		config.ManagementConsolePort = os.Getenv("MGMT_CONSOLE_PORT")
-		if config.ManagementConsolePort == "" {
-			config.ManagementConsolePort = "443"
-		}
-	}
-	if config.DeepfenceKey == "" {
-		config.DeepfenceKey = os.Getenv("DEEPFENCE_KEY")
-	}
-
-	cloudProvider := os.Getenv("CLOUD_PROVIDER")
-	cloudAccountID := os.Getenv("CLOUD_ACCOUNT_ID")
-	cloudMetadata, err := util.GetCloudMetadata()
-	if err == nil {
-		cloudProvider = cloudMetadata.CloudProvider
-		config.CloudMetadata = cloudMetadata
-		if cloudMetadata.ID != "" {
-			cloudAccountID = cloudMetadata.ID
-		}
-	} else {
-		config.CloudMetadata = cloudmetadata.CloudMetadata{
-			CloudProvider: cloudProvider,
-			ID:            cloudAccountID,
-		}
-	}
-	if cloudProvider != util.CloudProviderAWS &&
-		cloudProvider != util.CloudProviderGCP &&
-		cloudProvider != util.CloudProviderAzure {
-		return nil, errors.New("only aws/azure/gcp cloud providers are supported")
-	}
-	if cloudAccountID == "" {
-		return nil, errors.New("env CLOUD_ACCOUNT_ID is not set")
-	}
-
-	if config.ComplianceBenchmark != "all" {
-		config.ComplianceBenchmark = util.ComplianceBenchmarks[cloudProvider][config.ComplianceBenchmark]
-		if config.ComplianceBenchmark == "" {
-			availableBenchmarks := []string{"all"}
-			for b, _ := range util.ComplianceBenchmarks[cloudProvider] {
-				availableBenchmarks = append(availableBenchmarks, b)
-			}
-			return nil, fmt.Errorf("invalid benchmark, available benchmarks for cloud provider %s: %v", cloudProvider, availableBenchmarks)
-		}
-	}
-
-	config.NodeId = util.GetNodeId(cloudProvider, cloudAccountID)
-	config.NodeName = fmt.Sprintf("%s/%s", cloudProvider, cloudAccountID)
-	config.ScanId = fmt.Sprintf("%s_%s", config.NodeId, util.GetDatetimeNow())
-
-	config.CloudProvider = cloudProvider
 	return &CloudComplianceScan{
-		config:  config,
-		scanMap: sync.Map{},
+		scanMap:                  sync.Map{},
+		CloudProvider:            config.CloudProvider,
+		CloudMetadata:            cloudmetadata.CloudMetadata{},
+		AccountID:                config.AccountID,
+		IsOrganizationDeployment: config.IsOrganizationDeployment,
+		ComplianceCheckTypes:     []string{},
+		ComplianceBenchmark:      "all",
+		ScanID:                   fmt.Sprintf("%s_%s", config.NodeID, util.GetDatetimeNow()),
+		ScanInactiveThreshold:    config.ScanInactiveThreshold,
 	}, nil
-}
-
-func (c *CloudComplianceScan) GetConfig() util.Config {
-	return c.config
 }
 
 func (c *CloudComplianceScan) RunComplianceScan() (util.ComplianceGroup, error) {
 	tempFileName := fmt.Sprintf("/tmp/%s.json", util.RandomString(12))
 	defer os.Remove(tempFileName)
-	cmd := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.config.CloudProvider], tempFileName, c.config.ComplianceBenchmark)
+	cmd := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, c.ComplianceBenchmark)
 
 	var stdOut []byte
 	var stdErr error
@@ -160,17 +116,23 @@ func (c *CloudComplianceScan) RunComplianceScanBenchmark(ctx context.Context,
 
 	tempFileName := fmt.Sprintf("/tmp/%s.json", util.RandomString(12))
 	defer os.Remove(tempFileName)
-	//whereClause := fmt.Sprintf("resource_name IN (\"%s\")", strings.Join(benchmark.Controls, "\",\""))
-	log.Debug().Msgf("Account ID:%s", accountId, "config cloud metadata id:%s", c.config.CloudMetadata.ID)
+	log.Debug().Msgf("Account ID: %s, config cloud metadata id: %s", accountId, c.CloudMetadata.ID)
 
-	//cmdStr := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s --where=\"%s\" %s", cloudProviderPath[c.config.CloudProvider], tempFileName, whereClause, benchmark.Id)
-	cmdStr := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s",
-		cloudProviderPath[c.config.CloudProvider], tempFileName, benchmark.Id)
-	if accountId != c.config.CloudMetadata.ID {
-		log.Info().Msgf("Steampipe check assuming role for account: %s", accountId)
-		//cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=aws_%s --export=%s --where=\"%s\" %s", cloudProviderPath[c.config.CloudProvider], accountId, tempFileName, whereClause, benchmark.Id)
-		cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.config.CloudProvider], c.config.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
+	var cmdStr string
+	switch c.CloudProvider {
+	case util.CloudProviderAWS:
+		cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.CloudProvider], c.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
+	case util.CloudProviderGCP:
+		if c.IsOrganizationDeployment {
+			cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.CloudProvider], c.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
+		} else {
+			cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, benchmark.Id)
+		}
+	default:
+		cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, benchmark.Id)
 	}
+
+	log.Debug().Msgf("Steampipe command: %s", cmdStr)
 	cmd := exec.CommandContext(ctx, "bash", "-c", cmdStr)
 	//cmd.Env = os.Environ()
 	//cmd.Env = append(cmd.Env, "STEAMPIPE_INTROSPECTION=info")
@@ -201,8 +163,8 @@ func (c *CloudComplianceScan) ScanControl(scan *ctl.CloudComplianceScanDetails) 
 
 	log.Debug().Msgf("pending scan: %v", scan)
 
-	c.config.ScanId = scan.ScanId
-	c.config.ComplianceCheckTypes = scan.ScanTypes
+	c.ScanID = scan.ScanId
+	c.ComplianceCheckTypes = scan.ScanTypes
 
 	res, scanCtx := tasks.StartStatusReporter(
 		scan.ScanId,
@@ -216,7 +178,7 @@ func (c *CloudComplianceScan) ScanControl(scan *ctl.CloudComplianceScanDetails) 
 			FAILED:      "ERROR",
 			SUCCESS:     "COMPLETE",
 		},
-		time.Duration(c.config.InactiveThreshold)*time.Second)
+		time.Duration(c.ScanInactiveThreshold)*time.Second)
 
 	log.Info().Msgf("Adding to scanMap, scanid:%s", scan.ScanId)
 	c.scanMap.Store(scan.ScanId, scanCtx)
@@ -251,7 +213,7 @@ func (c *CloudComplianceScan) ScanControl(scan *ctl.CloudComplianceScanDetails) 
 	}
 
 	log.Info().Msgf("compliance scan started: %s", scan.ScanId)
-	extrasForInProgress["node_id"] = util.GetNodeId(c.config.CloudProvider, scan.AccountId)
+	extrasForInProgress["node_id"] = util.GetNodeId(c.CloudProvider, scan.AccountId)
 
 	stopped := false
 	wg := sync.WaitGroup{}
@@ -276,8 +238,7 @@ func (c *CloudComplianceScan) ScanControl(scan *ctl.CloudComplianceScanDetails) 
 		}
 
 		wg.Add(1)
-		go c.PublishBenchmarkResults(&wg, complianceResult, benchmark,
-			scan.AccountId, scan.ScanId, outputFile)
+		go c.PublishBenchmarkResults(&wg, complianceResult, benchmark, scan.AccountId, scan.ScanId, outputFile)
 
 		err = scanCtx.Checkpoint("compliance benchmark " + benchmark.Id + " completed")
 		if err != nil {
