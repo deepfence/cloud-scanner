@@ -1,6 +1,6 @@
 module github.com/deepfence/cloud-scanner
 
-go 1.22.3
+go 1.21.11
 
 replace github.com/deepfence/golang_deepfence_sdk/client => ./golang_deepfence_sdk/client
 
