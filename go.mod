@@ -6,6 +6,8 @@ replace github.com/deepfence/golang_deepfence_sdk/client => ./golang_deepfence_s
 
 replace github.com/deepfence/golang_deepfence_sdk/utils => ./golang_deepfence_sdk/utils
 
+replace github.com/deepfence/ThreatMapper/deepfence_utils => ./deepfence_utils
+
 require (
 	github.com/Jeffail/tunny v0.1.4
 	github.com/aws/aws-sdk-go v1.53.6
