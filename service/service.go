@@ -340,9 +340,7 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 }
 
 func (c *ComplianceScanService) loopRegister() {
-	err := c.dfClient.RegisterCloudAccount(c.config.NodeID, c.config.CloudProvider,
-		c.config.CloudMetadata.ID, c.GetOrganizationAccountIDs(),
-		&c.config.AccountID, c.config.Version)
+	err := c.dfClient.RegisterCloudAccount(c.GetOrganizationAccountIDs())
 	if err != nil {
 		log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
 	}
@@ -351,9 +349,7 @@ func (c *ComplianceScanService) loopRegister() {
 	for {
 		select {
 		case <-ticker1.C:
-			err = c.dfClient.RegisterCloudAccount(c.config.NodeID, c.config.CloudProvider,
-				c.config.CloudMetadata.ID, c.GetOrganizationAccountIDs(),
-				&c.config.AccountID, c.config.Version)
+			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccountIDs())
 			if err != nil {
 				log.Error().Msgf("Error in registering cloud account: %s", err.Error())
 			}
