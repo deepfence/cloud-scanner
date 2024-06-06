@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/deepfence/ThreatMapper/deepfence_utils/controls"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 
 	"github.com/deepfence/cloud-scanner/util"
@@ -59,60 +58,48 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func (c *Client) RegisterCloudAccount(hostId, cloudProvider, cloudMetaId string,
-	multiIds []string, orgId *string, version string) error {
-
-	nodeId := util.GetNodeId(cloudProvider, cloudMetaId)
+func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
+	nodeId := util.GetNodeId(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
-	if len(multiIds) > 0 {
-		monAccounts := map[string]string{}
-		for _, accId := range multiIds {
-			monAccounts[accId] = util.GetNodeId(cloudProvider, accId)
+	if c.config.IsOrganizationDeployment {
+		monitoredAccounts := map[string]string{}
+		for _, accountID := range monitoredAccountIDs {
+			monitoredAccounts[accountID] = util.GetNodeId(c.config.CloudProvider, accountID)
 		}
 
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				CloudAccount:        cloudMetaId,
-				CloudProvider:       cloudProvider,
-				MonitoredAccountIds: monAccounts,
-				NodeId:              nodeId,
-				HostNodeId:          &hostId,
-				OrgAccId:            orgId,
-				Version:             &version,
+				AccountId:                c.config.AccountID,
+				CloudProvider:            c.config.CloudProvider,
+				HostNodeId:               c.config.NodeID,
+				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
+				MonitoredAccountIds:      monitoredAccounts,
+				NodeId:                   nodeId,
+				OrganizationAccountId:    &c.config.AccountID,
+				Version:                  c.config.Version,
 			},
 		)
 	} else {
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				CloudAccount:  cloudMetaId,
-				CloudProvider: cloudProvider,
-				NodeId:        nodeId,
-				HostNodeId:    &hostId,
-				Version:       &version,
+				AccountId:                c.config.AccountID,
+				CloudProvider:            c.config.CloudProvider,
+				HostNodeId:               c.config.NodeID,
+				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
+				NodeId:                   nodeId,
+				Version:                  c.config.Version,
 			},
 		)
 	}
 
 	log.Debug().Msgf("Before CloudNodesAPI.RegisterCloudNodeAccountExecute")
-	out, _, err := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccountExecute(req)
+	_, err := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccountExecute(req)
 	if err != nil {
 		log.Error().Msgf("Request errored on registering on management console: %s", err.Error())
 		return err
 	}
 
-	if out.GetData().LogAction.Id != 0 && out.GetData().LogAction.RequestPayload != "" {
-		var r controls.SendAgentDiagnosticLogsRequest
-		err = json.Unmarshal([]byte(out.GetData().LogAction.RequestPayload), &r)
-		if err != nil {
-			log.Error().Msgf("Error in unmarshalling log action payload: %+v", err)
-		} else {
-			err = c.sendDiagnosticLogs(r, []string{HomeDirectory + "/.steampipe/logs"}, []string{})
-			if err != nil {
-				log.Error().Msgf("Error in sending diagnostic logs: %+v", err)
-			}
-		}
-	}
 	log.Info().Msgf("RegisterCloudAccount complete")
 	return nil
 }

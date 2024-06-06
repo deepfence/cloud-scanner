@@ -318,7 +318,7 @@ Resources:
           Value: "false"
         - Name: SUCCESS_SIGNAL_URL
           Value: !Ref SuccessSignalUrl
-        - Name: LOG_LEVEL
+        - Name: DF_LOG_LEVEL
           Value: !Ref LogLevel
         - Name: SCAN_INACTIVE_THRESHOLD
           Value: "21600"
