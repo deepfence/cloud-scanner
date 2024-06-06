@@ -3,7 +3,10 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: quay.io/deepfenceio/cloud-scanner
+  # ThreatMapper
+  repository: quay.io/deepfenceio/cloud_scanner_ce
+  # ThreatStryker
+  # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
   tag: "2.3.0-dev"
 
