@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -104,26 +104,6 @@ func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
 	return nil
 }
 
-func (c *Client) RegisterCloudResources(resources []map[string]interface{}) error {
-	var out []client.IngestersCloudResource
-	req := c.client.Client().CloudResourcesAPI.IngestCloudResources(context.Background())
-	b, err := json.Marshal(resources)
-	if err != nil {
-		log.Error().Msgf("Marshal error: %v", err)
-	}
-	err = json.Unmarshal(b, &out)
-	if err != nil {
-		log.Error().Msgf("UnMarshal error: %v", err)
-	}
-	req = req.IngestersCloudResource(out)
-	_, err = c.client.Client().CloudResourcesAPI.IngestCloudResourcesExecute(req)
-	if err != nil {
-		return err
-	}
-	log.Debug().Msgf("Resources ingested: %d", len(out))
-	return nil
-}
-
 func SendSuccessfulDeploymentSignal(successSignalUrl string) {
 	httpClient, err := buildHttpClient()
 	if err != nil {
@@ -158,14 +138,14 @@ func SendSuccessfulDeploymentSignal(successSignalUrl string) {
 		}
 		statusCode = resp.StatusCode
 		if statusCode == 200 {
-			response, err = ioutil.ReadAll(resp.Body)
+			response, err = io.ReadAll(resp.Body)
 			if err != nil {
 				log.Error().Msgf("Deployment success signal response cannot be parsed: %s", err.Error())
 			}
 			resp.Body.Close()
 			break
 		} else if statusCode == 403 {
-			response, err = ioutil.ReadAll(resp.Body)
+			response, err = io.ReadAll(resp.Body)
 			if err != nil {
 				log.Error().Msgf("Deployment success signal response for 403 cannot be parsed: %s",
 					err.Error())
@@ -182,7 +162,7 @@ func SendSuccessfulDeploymentSignal(successSignalUrl string) {
 			}
 		} else {
 			if retryCount > 10 {
-				response, err = ioutil.ReadAll(resp.Body)
+				response, err = io.ReadAll(resp.Body)
 				if err != nil {
 					log.Error().Msgf(err.Error())
 				}

@@ -228,7 +228,8 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		go c.refreshOrganizationAccountIDs()
 	}
 
-	go c.queryAndRegisterCloudResources()
+	go c.queryAndRegisterCloudResourcesPeriodically()
+	go c.refreshResourcesFromTrailPeriodically()
 
 	go c.listenForScans()
 	done := make(chan os.Signal, 1)
@@ -357,14 +358,37 @@ func (c *ComplianceScanService) loopRegister() {
 	}
 }
 
+func (c *ComplianceScanService) queryAndRegisterCloudResourcesPeriodically() {
+	refreshTicker := time.NewTicker(12 * time.Hour)
+	for {
+		jobCount.Add(1)
+		c.queryAndRegisterCloudResources()
+		jobCount.Add(-1)
+
+		<-refreshTicker.C
+	}
+}
+
 func (c *ComplianceScanService) queryAndRegisterCloudResources() {
 	log.Info().Msg("Querying Resources")
 	c.cloudResources.Lock()
 	defer c.cloudResources.Unlock()
 
-	errorsCollected := query_resource.QueryAndRegisterResources(c.config, c.dfClient, c.GetOrganizationAccountIDs())
+	errorsCollected := query_resource.QueryAndRegisterResources(c.config, c.GetOrganizationAccountIDs())
 	if len(errorsCollected) > 0 {
 		log.Error().Msgf("Error in sending resources, errors: %+v", errorsCollected)
+	}
+}
+
+func (c *ComplianceScanService) refreshResourcesFromTrailPeriodically() {
+	refreshTicker := time.NewTicker(1 * time.Hour)
+	for {
+		select {
+		case <-refreshTicker.C:
+			jobCount.Add(1)
+			c.refreshResourcesFromTrail()
+			jobCount.Add(-1)
+		}
 	}
 }
 
@@ -375,7 +399,7 @@ func (c *ComplianceScanService) refreshResourcesFromTrail() {
 	}
 
 	c.cloudResources.Lock()
-	errorsCollected := query_resource.QueryAndUpdateResources(c.config, c.dfClient, cloudResourceTypesToRefresh)
+	errorsCollected := query_resource.QueryAndUpdateResources(c.config, cloudResourceTypesToRefresh)
 	if len(errorsCollected) > 0 {
 		log.Error().Msgf("Error in sending resources  %+v", errorsCollected)
 	}
