@@ -87,6 +87,9 @@ func main() {
 		if config.AWSCredentialSource != "EcsContainer" && config.AWSCredentialSource != "Ec2InstanceMetadata" && config.AWSCredentialSource != "Environment" {
 			log.Fatal().Msgf("invalid AWS_CREDENTIAL_SOURCE - should be one of EcsContainer, Ec2InstanceMetadata, Environment")
 		}
+		if config.RoleName == "" {
+			log.Fatal().Msgf("ROLE_NAME is required in aws installation")
+		}
 	default:
 		config.AWSCredentialSource = ""
 	}
