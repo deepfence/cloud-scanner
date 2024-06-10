@@ -3,6 +3,7 @@ package query_resource
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,9 +11,12 @@ import (
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
-	"github.com/deepfence/cloud-scanner/internal/deepfence"
 	"github.com/deepfence/cloud-scanner/util"
 	_ "github.com/lib/pq"
+)
+
+var (
+	CloudResourcesFile = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resources/cloud_resources.log"
 )
 
 type CloudResourceInfo struct {
@@ -23,7 +27,6 @@ type CloudResourceInfo struct {
 
 var (
 	cloudProviderToResourceMap = map[string][]CloudResourceInfo{}
-	chunkSize                  = 1000
 )
 
 func init() {
@@ -70,7 +73,7 @@ func clearPostgresqlCache() error {
 	return nil
 }
 
-func QueryAndRegisterResources(config util.Config, client *deepfence.Client, organizationAccountIDs []string) []error {
+func QueryAndRegisterResources(config util.Config, organizationAccountIDs []string) []error {
 	err := clearPostgresqlCache()
 	if err != nil {
 		log.Warn().Msgf("failed to clear postgresql cache: " + err.Error())
@@ -84,22 +87,26 @@ func QueryAndRegisterResources(config util.Config, client *deepfence.Client, org
 		accountsToScan = append(accountsToScan, config.CloudMetadata.ID)
 	}
 	log.Info().Msgf("Started querying resources for %s: %v", config.CloudProvider, accountsToScan)
+
+	cloudResourcesFile, err := os.OpenFile(CloudResourcesFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return []error{err}
+	}
+	defer cloudResourcesFile.Close()
+
 	count := 0
-	var errors = make([]error, 0)
+	var errs = make([]error, 0)
 	for _, accountId := range accountsToScan {
 		for _, cloudResourceInfo := range cloudProviderToResourceMap[config.CloudProvider] {
-			cloudResourceChunks := queryResources(accountId, cloudResourceInfo, config, chunkSize)
-			for _, cloudResourceChunk := range cloudResourceChunks {
-				count += len(cloudResourceChunk)
-				err = client.RegisterCloudResources(cloudResourceChunk)
-				if err != nil {
-					errors = append(errors, err)
-				}
+			ingestedCount, err := queryResources(accountId, cloudResourceInfo, config, cloudResourcesFile)
+			if err != nil {
+				errs = append(errs, err)
 			}
+			count += ingestedCount
 		}
 	}
 	log.Info().Msgf("Cloud resources ingested: %d", count)
-	return errors
+	return errs
 }
 
 func clearPostgresqlCacheRows(keyPrefix string) error {
@@ -113,11 +120,17 @@ func clearPostgresqlCacheRows(keyPrefix string) error {
 	return nil
 }
 
-func QueryAndUpdateResources(config util.Config, client *deepfence.Client, cloudResourceTypesToRefresh map[string][]string) []error {
+func QueryAndUpdateResources(config util.Config, cloudResourceTypesToRefresh map[string][]string) []error {
 	log.Info().Msgf("Started querying updated resources for %s", config.CloudProvider)
+
+	cloudResourcesFile, err := os.OpenFile(CloudResourcesFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return []error{err}
+	}
+	defer cloudResourcesFile.Close()
+
 	count := 0
-	var errors = make([]error, 0)
-	var err error
+	var errs = make([]error, 0)
 	for accountID, resourceTypesToRefresh := range cloudResourceTypesToRefresh {
 		accountIDPrefix := ""
 		if accountID != config.CloudMetadata.ID {
@@ -130,28 +143,22 @@ func QueryAndUpdateResources(config util.Config, client *deepfence.Client, cloud
 			}
 			err = clearPostgresqlCacheRows(accountIDPrefix + cloudResourceInfo.Table)
 			if err != nil {
-				errors = append(errors, err)
+				errs = append(errs, err)
 				continue
 			}
-			cloudResourceChunks := queryResources(accountID, cloudResourceInfo, config, chunkSize)
-			for _, cloudResourceChunk := range cloudResourceChunks {
-				count += len(cloudResourceChunk)
-				err = client.RegisterCloudResources(cloudResourceChunk)
-				if err != nil {
-					errors = append(errors, err)
-				}
+			ingestedCount, err := queryResources(accountID, cloudResourceInfo, config, cloudResourcesFile)
+			if err != nil {
+				errs = append(errs, err)
 			}
+			count += ingestedCount
 		}
 	}
 
-	log.Info().Msgf("Cloud resources ingested: %d", count)
-	return errors
+	log.Info().Msgf("Cloud resources updated and ingested: %d", count)
+	return errs
 }
 
-func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, config util.Config, chunkSize int) [][]map[string]interface{} {
-	var cloudResourceChunks = make([][]map[string]interface{}, 0)
-	var cloudResources = make([]map[string]interface{}, 0)
-
+func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, config util.Config, cloudResourcesFile *os.File) (int, error) {
 	log.Debug().Msgf("Querying resources for %s", cloudResourceInfo.Table)
 
 	var query string
@@ -186,14 +193,14 @@ func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, confi
 		}
 	}
 	if stdErr != nil {
-		return cloudResourceChunks
+		return 0, stdErr
 	}
 
 	log.Trace().Msgf("Got stdout for %s: %s", cloudResourceInfo.Table, string(stdOut))
 	var objMap []map[string]interface{}
 	if err := json.Unmarshal(stdOut, &objMap); err != nil {
 		log.Error().Msgf("Error: %v \n Steampipe Output: %s", err, string(stdOut))
-		return cloudResourceChunks
+		return 0, errors.New(string(stdOut))
 	}
 	log.Debug().Msgf("Got length of %d for %s", len(objMap), cloudResourceInfo.Table)
 
@@ -229,8 +236,18 @@ func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, confi
 		if obj["region"] == nil || obj["region"] == "" {
 			obj["region"] = "global"
 		}
-		cloudResources = append(cloudResources, obj)
+
+		jsonBytes, err := json.Marshal(obj)
+		if err != nil {
+			log.Error().Msgf(err.Error())
+			continue
+		}
+		_, err = cloudResourcesFile.Write(append(jsonBytes, '\n'))
+		if err != nil {
+			log.Error().Msgf(err.Error())
+			continue
+		}
 	}
-	cloudResourceChunks = append(cloudResourceChunks, cloudResources)
-	return cloudResourceChunks
+
+	return len(objMap), nil
 }
