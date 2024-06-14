@@ -164,9 +164,6 @@ Resources:
   OrgAccIdsInfoFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
-      Environment:
-        Variables:
-          TARGET_AWS_ACCOUNT_ID: !Ref TargetAWSAccountID
       Code:
         ZipFile: |
           import re
@@ -186,11 +183,8 @@ Resources:
           
           def members(event, context):
               client = boto3.client('organizations')
-              target_aws_account_id = os.getenv("TARGET_AWS_ACCOUNT_ID")
               root_accounts = []
-              root_account_ids = []
-              role_account_ids = []
-              root_id = ''
+              root_organizational_unit_id = ''
               next_token = None
               while True:
                   try:
@@ -208,74 +202,11 @@ Resources:
                       next_token = resp['NextToken']
                   else:
                       break
-              root_account_id = ''
-              organization = {}
               for root_account in root_accounts:
                   if root_account['Id'].startswith('r-'):
-                      root_id = root_account['Id']
-                  acc_id = parse_account_id(root_account['Arn'])
-                  if acc_id:
-                      root_account_ids.append(acc_id)
-              accounts = []
-              next_token = None
-              while True:
-                  try:
-                      if next_token:
-                          resp = client.list_accounts(MaxResults=20, NextToken=next_token)
-                      else:
-                          resp = client.list_accounts(MaxResults=20)
-                  except client.exceptions.AccessDeniedException:
-                      print("Got AccessDeniedException when calling List Accounts API on Organizations Client")
-                      break
-                  if not resp.get('Accounts', []):
-                      break
-                  for acc in resp['Accounts']:
-                      if acc['Id'] not in root_account_ids:
-                          accounts.append(acc)
-                          role_account_ids.append(acc['Id'])
-                      else:
-                          root_account_id = acc['Id']
-                  if 'NextToken' in resp:
-                      next_token = resp['NextToken']
-                  else:
-                      break
-              if root_account_ids and not root_account_id:
-                  root_account_id = root_account_ids[0]
-          
-              deploymentAccount = ''
-              curr_acc_id = ''
-              sts_client = boto3.client('sts')
-              try:
-                  caller_identity = sts_client.get_caller_identity()
-                  curr_acc_id = caller_identity.get('Account', '')
-              except client.exceptions.AccessDeniedException:
-                  print("Got AccessDeniedException when calling Get Caller Identity API on STS Client")
-              role_account_filter = 'DIFFERENCE'
-              members = ','.join([i['Id'] for i in accounts])
-          
-              if target_aws_account_id:
-                  deploymentAccount = target_aws_account_id
-                  role_account_ids = [target_aws_account_id]
-              elif root_id:
-                  if curr_acc_id != root_account_id:
-                      deploymentAccount = curr_acc_id
-                      role_account_ids = [root_account_id]
-                      role_account_filter = 'INTERSECTION'
-                  else:
-                      deploymentAccount = accounts[random.randint(0, len(accounts) - 1)]['Id']
-                      role_account_ids = [deploymentAccount]
-              elif root_account_ids:
-                  deploymentAccount = root_account_ids[0]
-                  role_account_ids = [root_account_ids[0]]
-              else:
-                  deploymentAccount = curr_acc_id
-                  role_account_ids = [curr_acc_id]
+                      root_organizational_unit_id = root_account['Id']
               accountIds = {
-                  'Members': members,
-                  'RootOrgId': root_id,
-                  'DeploymentAccountId': deploymentAccount,
-                  'RoleAccIds': ','.join([i for i in role_account_ids]),
-                  'RoleAccFilter': role_account_filter
+                  'rootOrganizationalUnitID': root_organizational_unit_id,
               }
               cfnresponse.send(event, context, cfnresponse.SUCCESS, accountIds)
       Handler: index.members
@@ -358,11 +289,9 @@ Resources:
           OrganizationalUnitIds:
           - !GetAtt
             - OrgAccIds
-            - RootOrgId
+            - rootOrganizationalUnitID
           Accounts:
-          - !GetAtt
-            - OrgAccIds
-            - DeploymentAccountId
+          - !Ref TargetAWSAccountID
         Regions:
         - !Ref 'AWS::Region'
       StackSetName: !Join
@@ -391,16 +320,12 @@ Resources:
       ManagedExecution:
         Active: true
       OperationPreferences:
-        FailureToleranceCount: 0
-        MaxConcurrentCount: 1
-        RegionConcurrencyType: SEQUENTIAL
-        RegionOrder:
-        - !Ref 'AWS::Region'
+        FailureToleranceCount: 99
+        MaxConcurrentCount: 100
+        RegionConcurrencyType: PARALLEL
       Parameters:
       - ParameterKey: CloudScannerAccountId
-        ParameterValue: !GetAtt
-        - OrgAccIds
-        - DeploymentAccountId
+        ParameterValue: !Ref TargetAWSAccountID
       - ParameterKey: ParentStackName
         ParameterValue: !Ref 'AWS::StackName'
       - ParameterKey: TaskIAMRole
@@ -408,18 +333,13 @@ Resources:
       PermissionModel: SERVICE_MANAGED
       StackInstancesGroup:
       - DeploymentTargets:
-          AccountFilterType: !GetAtt
-          - OrgAccIds
-          - RoleAccFilter
+          AccountFilterType: DIFFERENCE
           OrganizationalUnitIds:
           - !GetAtt
             - OrgAccIds
-            - RootOrgId
-          Accounts: !Split
-          - ','
-          - !GetAtt
-            - OrgAccIds
-            - RoleAccIds
+            - rootOrganizationalUnitID
+          Accounts:
+          - !Ref 'AWS::AccountId'
         Regions:
         - !Ref 'AWS::Region'
       StackSetName: !Join
@@ -428,3 +348,31 @@ Resources:
         - Roles
       TemplateURL: >-
         https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-roles.template
+  ReadOnlyRole:
+    Type: 'AWS::IAM::Role'
+    DependsOn: CloudScannerDeploymentCompleteWait
+    Properties:
+      Path: /
+      RoleName: !Join
+      - ''
+      - - !Ref 'AWS::StackName'
+      AssumeRolePolicyDocument: !Join
+      - ''
+      - - >-
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["arn:aws:iam::
+        - !Ref TargetAWSAccountID
+        - ':role/'
+        - !Join
+          - ''
+          - - !Ref 'AWS::StackName'
+            - OrgRole
+        - '"]},"Action":"sts:AssumeRole"}]}'
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - !Ref TaskIAMRole
+      - arn:aws:iam::aws:policy/AWSOrganizationsReadOnlyAccess
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ''
+        - - !Ref 'AWS::StackName'
