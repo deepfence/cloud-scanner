@@ -24,7 +24,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	ctl "github.com/deepfence/ThreatMapper/deepfence_utils/controls"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
-	cloud_metadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 	"github.com/deepfence/cloud-scanner/cloud_resource_changes"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
 	"github.com/deepfence/cloud-scanner/query_resource"
@@ -147,7 +146,7 @@ func getAWSCredentialsConfig(ctx context.Context, accountID, region, roleName st
 	return cfg, err
 }
 
-func (c *ComplianceScanService) fetchOrganizationAccountIDs() error {
+func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 	organizationAccountIDs := []string{}
 
 	ctx := context.Background()
@@ -195,28 +194,27 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	if c.config.HttpServerRequired {
 		go c.runHttpServer()
 	}
-	if c.config.IsOrganizationDeployment {
-		err := c.fetchOrganizationAccountIDs()
-		if err != nil {
-			log.Warn().Msg(err.Error())
+	var err error
+	switch c.config.CloudProvider {
+	case util.CloudProviderAWS:
+		if c.config.IsOrganizationDeployment {
+			err = c.fetchAWSOrganizationAccountIDs()
+			if err != nil {
+				log.Warn().Msg(err.Error())
+			}
 		}
-	}
-	if c.config.CloudProvider == cloud_metadata.CloudProviderAWS {
 		processAwsCredentials(c)
-	} else if c.config.CloudProvider == cloud_metadata.CloudProviderGCP {
-		err := processGcpCredentials(c)
-		if err != nil {
-			log.Fatal().Msgf("%+v", err)
-		}
-	} else if c.config.CloudProvider == cloud_metadata.CloudProviderAzure {
-		processAzureCredentials()
+	case util.CloudProviderGCP:
+		processGcpCredentials(c)
+	case util.CloudProviderAzure:
+		processAzureCredentials(c)
 	}
 
 	log.Info().Msgf("Restarting the steampipe service")
 	util.RestartSteampipeService()
 
 	log.Info().Msgf("CloudResourceChanges Initialization started")
-	err := c.CloudResourceChanges.Initialize()
+	err = c.CloudResourceChanges.Initialize()
 	if err != nil {
 		log.Warn().Msgf("%+v", err)
 	}
@@ -238,14 +236,26 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	return nil
 }
 
-func processAzureCredentials() {
-	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/azure.spc",
-		"\nconnection \"azure\" {\n  plugin = \"azure\"\n "+
-			"  subscription_id = \""+os.Getenv("AZURE_SUBSCRIPTION_ID")+"\"\n"+
-			"  tenant_id = \""+os.Getenv("AZURE_TENANT_ID")+"\"\n"+
-			"  client_id = \""+os.Getenv("AZURE_CLIENT_ID")+"\"\n"+
-			"  client_secret = \""+os.Getenv("AZURE_CLIENT_SECRET")+"\"\n"+
-			"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n")
+func processAzureCredentials(c *ComplianceScanService) {
+	steampipeConfigFile := "connection \"azure_all\" {\n  type = \"aggregator\" \n plugin      = \"azure\" \n  connections = [\"azure_*\"] \n} \n"
+	if c.config.IsOrganizationDeployment {
+		for _, accountID := range c.GetOrganizationAccountIDs() {
+			steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin = \"azure\"\n " +
+				"  subscription_id = \"" + accountID + "\"\n" +
+				"  tenant_id = \"" + c.config.OrganizationID + "\"\n" +
+				"  client_id = \"" + os.Getenv("AZURE_CLIENT_ID") + "\"\n" +
+				"  client_secret = \"" + os.Getenv("AZURE_CLIENT_SECRET") + "\"\n" +
+				"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+		}
+	} else {
+		steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin = \"azure\"\n " +
+			"  subscription_id = \"" + c.config.AccountID + "\"\n" +
+			"  tenant_id = \"" + c.config.OrganizationID + "\"\n" +
+			"  client_id = \"" + os.Getenv("AZURE_CLIENT_ID") + "\"\n" +
+			"  client_secret = \"" + os.Getenv("AZURE_CLIENT_SECRET") + "\"\n" +
+			"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+	}
+	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/azure.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
@@ -287,19 +297,19 @@ func processAwsCredentials(c *ComplianceScanService) {
 	}
 }
 
-func processGcpCredentials(c *ComplianceScanService) error {
-	organizationAccountIDs := c.GetOrganizationAccountIDs()
-	if len(organizationAccountIDs) > 0 {
-		steampipeConfigFile := "connection \"gcp_all\" {\n  type = \"aggregator\" \n plugin      = \"gcp\" \n  connections = [\"gcp_*\"] \n} \n"
-		for _, accountID := range organizationAccountIDs {
+func processGcpCredentials(c *ComplianceScanService) {
+	steampipeConfigFile := "connection \"gcp_all\" {\n  type = \"aggregator\" \n plugin      = \"gcp\" \n  connections = [\"gcp_*\"] \n} \n"
+	if c.config.IsOrganizationDeployment {
+		for _, accountID := range c.GetOrganizationAccountIDs() {
 			steampipeConfigFile += "connection \"gcp_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin  = \"gcp\"\n  project = \"" + accountID + "\"\n}\n"
 		}
-		err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/gcp.spc", steampipeConfigFile)
-		if err != nil {
-			log.Fatal().Msgf(err.Error())
-		}
+	} else {
+		steampipeConfigFile += "connection \"gcp_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin  = \"gcp\"\n  project = \"" + c.config.AccountID + "\"\n}\n"
 	}
-	return nil
+	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/gcp.spc", steampipeConfigFile)
+	if err != nil {
+		log.Fatal().Msgf(err.Error())
+	}
 }
 
 func saveFileOverwrite(fileName string, fileContents string) error {
@@ -321,20 +331,19 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 	for {
 		select {
 		case <-ticker.C:
-			err := c.fetchOrganizationAccountIDs()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-				continue
-			}
-			if c.config.CloudProvider == cloud_metadata.CloudProviderAWS {
-				processAwsCredentials(c)
-			} else if c.config.CloudProvider == cloud_metadata.CloudProviderGCP {
-				err := processGcpCredentials(c)
-				if err != nil {
-					log.Fatal().Msgf("%+v", err)
+			var err error
+			if c.config.CloudProvider == util.CloudProviderAWS {
+				if c.config.IsOrganizationDeployment {
+					err = c.fetchAWSOrganizationAccountIDs()
+					if err != nil {
+						log.Warn().Msg(err.Error())
+					}
 				}
-			} else if c.config.CloudProvider == cloud_metadata.CloudProviderAzure {
-				processAzureCredentials()
+				processAwsCredentials(c)
+			} else if c.config.CloudProvider == util.CloudProviderGCP {
+				processGcpCredentials(c)
+			} else if c.config.CloudProvider == util.CloudProviderAzure {
+				processAzureCredentials(c)
 			}
 		}
 	}

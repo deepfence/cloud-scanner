@@ -76,7 +76,7 @@ func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
 				MonitoredAccountIds:      monitoredAccounts,
 				NodeId:                   nodeId,
-				OrganizationAccountId:    &c.config.AccountID,
+				OrganizationAccountId:    &c.config.OrganizationID,
 				Version:                  c.config.Version,
 			},
 		)
@@ -93,14 +93,14 @@ func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
 		)
 	}
 
-	log.Debug().Msgf("Before CloudNodesAPI.RegisterCloudNodeAccountExecute")
+	log.Debug().Msgf("Registering on management console")
 	_, err := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccountExecute(req)
 	if err != nil {
 		log.Error().Msgf("Request errored on registering on management console: %s", err.Error())
 		return err
 	}
 
-	log.Info().Msgf("RegisterCloudAccount complete")
+	log.Info().Msgf("Register cloud account complete")
 	return nil
 }
 

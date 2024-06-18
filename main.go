@@ -82,6 +82,12 @@ func main() {
 		deepfence.SendSuccessfulDeploymentSignal(config.SuccessSignalUrl)
 	}
 
+	if config.IsOrganizationDeployment {
+		if config.OrganizationID == "" {
+			log.Fatal().Msgf("ORGANIZATION_ID is required in organization deployment")
+		}
+	}
+
 	switch config.CloudProvider {
 	case util.CloudProviderAWS:
 		if config.AWSCredentialSource != "EcsContainer" && config.AWSCredentialSource != "Ec2InstanceMetadata" && config.AWSCredentialSource != "Environment" {
