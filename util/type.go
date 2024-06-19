@@ -62,6 +62,12 @@ type Config struct {
 	Version       string                      `ignored:"true" json:"version"`
 }
 
+type OrganizationMonitoredAccount struct {
+	AccountId   string `json:"account_id"`
+	AccountName string `json:"account_name"`
+	NodeId      string `json:"node_id"`
+}
+
 type ComplianceDoc struct {
 	Timestamp           string `json:"@timestamp"`
 	Count               int    `json:"count,omitempty"`

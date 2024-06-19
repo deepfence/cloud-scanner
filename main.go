@@ -84,7 +84,7 @@ func main() {
 
 	if config.IsOrganizationDeployment {
 		if config.OrganizationID == "" {
-			log.Fatal().Msgf("ORGANIZATION_ID is required in organization deployment")
+			log.Fatal().Msgf("CLOUD_ORGANIZATION_ID is required in organization deployment")
 		}
 	}
 

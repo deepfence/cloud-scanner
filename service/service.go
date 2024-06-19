@@ -60,7 +60,7 @@ type ComplianceScanService struct {
 	cloudResources             *CloudResources
 	CloudTrails                []util.CloudTrailDetails
 	SocketPath                 *string
-	organizationAccountIDs     []string
+	organizationAccountIDs     []util.OrganizationMonitoredAccount
 	organizationAccountIDsLock sync.RWMutex
 	CloudResourceChanges       cloud_resource_changes.CloudResourceChanges
 }
@@ -108,12 +108,22 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		cloudResources:         &CloudResources{},
 		CloudTrails:            cloudTrails,
 		SocketPath:             socketPath,
-		organizationAccountIDs: []string{},
+		organizationAccountIDs: []util.OrganizationMonitoredAccount{},
 		CloudResourceChanges:   cloudResourceChanges,
 	}, err
 }
 
 func (c *ComplianceScanService) GetOrganizationAccountIDs() []string {
+	c.organizationAccountIDsLock.RLock()
+	defer c.organizationAccountIDsLock.RUnlock()
+	organizationAccountIDs := make([]string, len(c.organizationAccountIDs))
+	for i, accountID := range c.organizationAccountIDs {
+		organizationAccountIDs[i] = accountID.AccountId
+	}
+	return organizationAccountIDs
+}
+
+func (c *ComplianceScanService) GetOrganizationAccounts() []util.OrganizationMonitoredAccount {
 	c.organizationAccountIDsLock.RLock()
 	defer c.organizationAccountIDsLock.RUnlock()
 	return c.organizationAccountIDs
@@ -147,7 +157,7 @@ func getAWSCredentialsConfig(ctx context.Context, accountID, region, roleName st
 }
 
 func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
-	organizationAccountIDs := []string{}
+	organizationAccountIDs := []util.OrganizationMonitoredAccount{}
 
 	ctx := context.Background()
 	cfg, err := getAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
@@ -175,7 +185,11 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 				continue
 			}
 			log.Debug().Msgf("Account ID %s - IAM role found", *account.Id)
-			organizationAccountIDs = append(organizationAccountIDs, *account.Id)
+			organizationAccountIDs = append(organizationAccountIDs, util.OrganizationMonitoredAccount{
+				AccountId:   *account.Id,
+				AccountName: *account.Name,
+				NodeId:      util.GetNodeId(c.config.CloudProvider, *account.Id),
+			})
 		}
 		if accounts.NextToken == nil {
 			break
@@ -187,6 +201,14 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 	c.organizationAccountIDs = organizationAccountIDs
 	c.organizationAccountIDsLock.Unlock()
 
+	return nil
+}
+
+func (c *ComplianceScanService) fetchGCPOrganizationProjects() error {
+	return nil
+}
+
+func (c *ComplianceScanService) fetchAzureTenantSubscriptions() error {
 	return nil
 }
 
@@ -205,8 +227,20 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		}
 		processAwsCredentials(c)
 	case util.CloudProviderGCP:
+		if c.config.IsOrganizationDeployment {
+			err = c.fetchGCPOrganizationProjects()
+			if err != nil {
+				log.Warn().Msg(err.Error())
+			}
+		}
 		processGcpCredentials(c)
 	case util.CloudProviderAzure:
+		if c.config.IsOrganizationDeployment {
+			err = c.fetchAzureTenantSubscriptions()
+			if err != nil {
+				log.Warn().Msg(err.Error())
+			}
+		}
 		processAzureCredentials(c)
 	}
 
@@ -341,8 +375,20 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 				}
 				processAwsCredentials(c)
 			} else if c.config.CloudProvider == util.CloudProviderGCP {
+				if c.config.IsOrganizationDeployment {
+					err = c.fetchGCPOrganizationProjects()
+					if err != nil {
+						log.Warn().Msg(err.Error())
+					}
+				}
 				processGcpCredentials(c)
 			} else if c.config.CloudProvider == util.CloudProviderAzure {
+				if c.config.IsOrganizationDeployment {
+					err = c.fetchAzureTenantSubscriptions()
+					if err != nil {
+						log.Warn().Msg(err.Error())
+					}
+				}
 				processAzureCredentials(c)
 			}
 		}
@@ -350,7 +396,7 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 }
 
 func (c *ComplianceScanService) loopRegister() {
-	err := c.dfClient.RegisterCloudAccount(c.GetOrganizationAccountIDs())
+	err := c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
 	if err != nil {
 		log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
 	}
@@ -359,7 +405,7 @@ func (c *ComplianceScanService) loopRegister() {
 	for {
 		select {
 		case <-ticker1.C:
-			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccountIDs())
+			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
 			if err != nil {
 				log.Error().Msgf("Error in registering cloud account: %s", err.Error())
 			}

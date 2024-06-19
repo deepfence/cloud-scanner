@@ -306,6 +306,8 @@ Resources:
           Value: !Ref 'AWS::Region'
         - Name: CLOUD_ACCOUNT_ID
           Value: !Ref OrgAccId
+        - Name: CLOUD_ORGANIZATION_ID
+          Value: !Ref OrgAccId
         - Name: ORGANIZATION_DEPLOYMENT
           Value: "true"
         - Name: ROLE_NAME
