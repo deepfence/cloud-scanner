@@ -58,7 +58,7 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.OrganizationMonitoredAccount) error {
+func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount) error {
 	nodeId := util.GetNodeId(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())

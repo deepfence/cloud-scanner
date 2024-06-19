@@ -60,9 +60,10 @@ type Config struct {
 	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
 	NodeID        string                      `ignored:"true" json:"-"`
 	Version       string                      `ignored:"true" json:"version"`
+	AccountName   string                      `ignored:"true" json:"account_name"`
 }
 
-type OrganizationMonitoredAccount struct {
+type MonitoredAccount struct {
 	AccountId   string `json:"account_id"`
 	AccountName string `json:"account_name"`
 	NodeId      string `json:"node_id"`
