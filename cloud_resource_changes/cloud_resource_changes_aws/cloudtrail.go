@@ -195,7 +195,7 @@ func (c *CloudResourceChangesAWS) listAndProcessS3Objects(regionalFilePrefix str
 		EncodingType: aws.String("url"),
 		Prefix:       aws.String(regionalFilePrefix),
 	}
-	if accId != c.config.CloudMetadata.ID {
+	if accId != c.config.AccountID {
 		params = params.SetExpectedBucketOwner(accId)
 	}
 	err = svc.ListObjectsV2Pages(params, func(resp *s3.ListObjectsV2Output, lastPage bool) bool {
@@ -257,7 +257,7 @@ func (c *CloudResourceChangesAWS) processCloudtrailEventLogFile(fileName string,
 		Bucket: aws.String(s3Bucket),
 		Key:    aws.String(*key.Key),
 	}
-	if accId != c.config.CloudMetadata.ID {
+	if accId != c.config.AccountID {
 		s3ObjectInput.SetExpectedBucketOwner(accId)
 	}
 	_, err = downloader.Download(file, &s3ObjectInput)

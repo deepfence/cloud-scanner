@@ -132,10 +132,7 @@ func QueryAndUpdateResources(config util.Config, cloudResourceTypesToRefresh map
 	count := 0
 	var errs = make([]error, 0)
 	for accountID, resourceTypesToRefresh := range cloudResourceTypesToRefresh {
-		accountIDPrefix := ""
-		if accountID != config.CloudMetadata.ID {
-			accountIDPrefix = config.CloudProvider + "_" + accountID + "."
-		}
+		accountIDPrefix := config.CloudProvider + "_" + accountID + "."
 
 		for _, cloudResourceInfo := range cloudProviderToResourceMap[config.CloudProvider] {
 			if !util.InSlice(cloudResourceInfo.Table, resourceTypesToRefresh) {
@@ -161,20 +158,7 @@ func QueryAndUpdateResources(config util.Config, cloudResourceTypesToRefresh map
 func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, config util.Config, cloudResourcesFile *os.File) (int, error) {
 	log.Debug().Msgf("Querying resources for %s", cloudResourceInfo.Table)
 
-	var query string
-	switch config.CloudProvider {
-	case util.CloudProviderAWS:
-		query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from aws_" + accountId + "." + cloudResourceInfo.Table + " \""
-	case util.CloudProviderGCP:
-		if config.IsOrganizationDeployment {
-			query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from gcp_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
-		} else {
-			query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + cloudResourceInfo.Table + " \""
-		}
-	default:
-		query = "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + cloudResourceInfo.Table + " \""
-	}
-
+	query := "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + config.CloudProvider + "_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
 	var stdOut []byte
 	var stdErr error
 	for i := 0; i <= 3; i++ {

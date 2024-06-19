@@ -68,49 +68,6 @@ func NewCloudComplianceScan(config util.Config) (*CloudComplianceScan, error) {
 	}, nil
 }
 
-func (c *CloudComplianceScan) RunComplianceScan() (util.ComplianceGroup, error) {
-	tempFileName := fmt.Sprintf("/tmp/%s.json", util.RandomString(12))
-	defer os.Remove(tempFileName)
-	cmd := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, c.ComplianceBenchmark)
-
-	var stdOut []byte
-	var stdErr error
-	for i := 0; i <= 3; i++ {
-		stdOut, stdErr = exec.Command("bash", "-c", cmd).CombinedOutput()
-		if stdErr != nil {
-			log.Error().Msgf("Steampipe check error: %v for query: %s", stdErr, cmd)
-			log.Error().Msgf(string(stdOut))
-			if strings.Contains(string(stdOut), util.ErrSteampipeDB) || strings.Contains(string(stdOut), util.ErrSteampipeInvalidClientTokenID) {
-				util.RestartSteampipeService()
-			} else {
-				time.Sleep(util.SleepTime)
-			}
-			os.Remove(tempFileName)
-			continue
-		} else {
-			break
-		}
-	}
-
-	var complianceResults util.ComplianceGroup
-	if _, err := os.Stat(tempFileName); errors.Is(err, os.ErrNotExist) {
-		return complianceResults, fmt.Errorf("%s: %v", stdOut, stdErr)
-	}
-	tempFile, err := os.Open(tempFileName)
-	if err != nil {
-		return complianceResults, err
-	}
-	results, err := io.ReadAll(tempFile)
-	if err != nil {
-		return complianceResults, err
-	}
-	err = json.Unmarshal(results, &complianceResults)
-	if err != nil {
-		return complianceResults, err
-	}
-	return complianceResults, nil
-}
-
 func (c *CloudComplianceScan) RunComplianceScanBenchmark(ctx context.Context,
 	benchmark ctl.CloudComplianceScanBenchmark, accountId string) (*util.ComplianceGroup, error) {
 
@@ -118,20 +75,7 @@ func (c *CloudComplianceScan) RunComplianceScanBenchmark(ctx context.Context,
 	defer os.Remove(tempFileName)
 	log.Debug().Msgf("Account ID: %s, config cloud metadata id: %s", accountId, c.CloudMetadata.ID)
 
-	var cmdStr string
-	switch c.CloudProvider {
-	case util.CloudProviderAWS:
-		cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.CloudProvider], c.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
-	case util.CloudProviderGCP:
-		if c.IsOrganizationDeployment {
-			cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.CloudProvider], c.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
-		} else {
-			cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, benchmark.Id)
-		}
-	default:
-		cmdStr = fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --export=%s %s", cloudProviderPath[c.CloudProvider], tempFileName, benchmark.Id)
-	}
-
+	cmdStr := fmt.Sprintf("cd %s && steampipe check --progress=false --output=none --search-path=%s_%s --export=%s %s", cloudProviderPath[c.CloudProvider], c.CloudProvider, strings.Replace(accountId, "-", "", -1), tempFileName, benchmark.Id)
 	log.Debug().Msgf("Steampipe command: %s", cmdStr)
 	cmd := exec.CommandContext(ctx, "bash", "-c", cmdStr)
 	//cmd.Env = os.Environ()

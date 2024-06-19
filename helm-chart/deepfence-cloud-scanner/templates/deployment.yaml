@@ -50,6 +50,8 @@ spec:
             value: "{{ .Values.cloudAccount.region }}"
           - name: CLOUD_ACCOUNT_ID
             value: "{{ .Values.cloudAccount.accountID }}"
+          - name: CLOUD_ORGANIZATION_ID
+            value: "{{ .Values.cloudAccount.organizationAccountID }}"
           - name: ORGANIZATION_DEPLOYMENT
             value: "{{ .Values.cloudAccount.isOrganizationDeployment }}"
           - name: ROLE_NAME

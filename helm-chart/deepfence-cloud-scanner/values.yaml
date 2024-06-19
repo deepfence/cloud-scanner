@@ -29,6 +29,7 @@ cloudAccount:
   region: ""
   # Is this organization deployment or single account deployment?
   isOrganizationDeployment: false
+  organizationAccountID: ""
   # Role name. The name should be same across all accounts in the Organization deployment.
   # Role ARN example: arn:aws:iam::123456789012:role/deepfence-managed-cloud-scanner-role
   # Role name in this case is deepfence-managed-cloud-scanner-role

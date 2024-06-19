@@ -46,6 +46,7 @@ type Config struct {
 	CloudProvider            string   `envconfig:"CLOUD_PROVIDER" json:"cloud_provider"`
 	CloudRegion              string   `envconfig:"CLOUD_REGION" json:"cloud_region"`
 	AccountID                string   `envconfig:"CLOUD_ACCOUNT_ID" json:"account_id"`
+	OrganizationID           string   `envconfig:"CLOUD_ORGANIZATION_ID" json:"organization_id"`
 	IsOrganizationDeployment bool     `envconfig:"ORGANIZATION_DEPLOYMENT" default:"false" json:"is_organization_deployment"`
 	RoleName                 string   `envconfig:"ROLE_NAME" json:"role_name"`
 	AWSCredentialSource      string   `envconfig:"AWS_CREDENTIAL_SOURCE" json:"aws_credential_source"`
@@ -59,6 +60,12 @@ type Config struct {
 	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
 	NodeID        string                      `ignored:"true" json:"-"`
 	Version       string                      `ignored:"true" json:"version"`
+}
+
+type OrganizationMonitoredAccount struct {
+	AccountId   string `json:"account_id"`
+	AccountName string `json:"account_name"`
+	NodeId      string `json:"node_id"`
 }
 
 type ComplianceDoc struct {

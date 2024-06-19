@@ -58,25 +58,30 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
+func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.OrganizationMonitoredAccount) error {
 	nodeId := util.GetNodeId(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
 	if c.config.IsOrganizationDeployment {
-		monitoredAccounts := map[string]string{}
-		for _, accountID := range monitoredAccountIDs {
-			monitoredAccounts[accountID] = util.GetNodeId(c.config.CloudProvider, accountID)
+		monitoredAccounts := make([]client.ModelCloudNodeMonitoredAccount, len(monitoredOrganizationAccounts))
+		for _, account := range monitoredOrganizationAccounts {
+			monitoredAccounts = append(monitoredAccounts, client.ModelCloudNodeMonitoredAccount{
+				AccountId:   account.AccountId,
+				AccountName: account.AccountName,
+				NodeId:      account.NodeId,
+			})
 		}
 
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
 				AccountId:                c.config.AccountID,
+				AccountName:              "",
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
-				MonitoredAccountIds:      monitoredAccounts,
+				MonitoredAccounts:        monitoredAccounts,
 				NodeId:                   nodeId,
-				OrganizationAccountId:    &c.config.AccountID,
+				OrganizationAccountId:    &c.config.OrganizationID,
 				Version:                  c.config.Version,
 			},
 		)
@@ -84,6 +89,7 @@ func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
 				AccountId:                c.config.AccountID,
+				AccountName:              "",
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
@@ -93,14 +99,14 @@ func (c *Client) RegisterCloudAccount(monitoredAccountIDs []string) error {
 		)
 	}
 
-	log.Debug().Msgf("Before CloudNodesAPI.RegisterCloudNodeAccountExecute")
+	log.Debug().Msgf("Registering on management console")
 	_, err := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccountExecute(req)
 	if err != nil {
 		log.Error().Msgf("Request errored on registering on management console: %s", err.Error())
 		return err
 	}
 
-	log.Info().Msgf("RegisterCloudAccount complete")
+	log.Info().Msgf("Register cloud account complete")
 	return nil
 }
 
