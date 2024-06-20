@@ -321,15 +321,6 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 			if err != nil {
 				log.Warn().Msg(err.Error())
 			}
-		} else {
-			organizationAccountIDs, err := c.fetchAzureTenantSubscriptions()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-			} else {
-				if len(organizationAccountIDs) == 1 {
-					c.config.AccountName = organizationAccountIDs[0].AccountName
-				}
-			}
 		}
 		processAzureCredentials(c)
 	}

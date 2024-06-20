@@ -46,6 +46,7 @@ type Config struct {
 	CloudProvider            string   `envconfig:"CLOUD_PROVIDER" json:"cloud_provider"`
 	CloudRegion              string   `envconfig:"CLOUD_REGION" json:"cloud_region"`
 	AccountID                string   `envconfig:"CLOUD_ACCOUNT_ID" json:"account_id"`
+	AccountName              string   `envconfig:"CLOUD_ACCOUNT_NAME" json:"account_name"`
 	OrganizationID           string   `envconfig:"CLOUD_ORGANIZATION_ID" json:"organization_id"`
 	IsOrganizationDeployment bool     `envconfig:"ORGANIZATION_DEPLOYMENT" default:"false" json:"is_organization_deployment"`
 	RoleName                 string   `envconfig:"ROLE_NAME" json:"role_name"`
@@ -60,7 +61,6 @@ type Config struct {
 	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
 	NodeID        string                      `ignored:"true" json:"-"`
 	Version       string                      `ignored:"true" json:"version"`
-	AccountName   string                      `ignored:"true" json:"account_name"`
 }
 
 type MonitoredAccount struct {
