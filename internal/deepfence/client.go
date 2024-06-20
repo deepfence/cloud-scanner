@@ -67,15 +67,15 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Organ
 		for _, account := range monitoredOrganizationAccounts {
 			monitoredAccounts = append(monitoredAccounts, client.ModelCloudNodeMonitoredAccount{
 				AccountId:   account.AccountId,
-				AccountName: account.AccountName,
+				AccountName: &account.AccountName,
 				NodeId:      account.NodeId,
 			})
 		}
 
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
+				//AccountName:              "",
 				AccountId:                c.config.AccountID,
-				AccountName:              "",
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
@@ -88,8 +88,8 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Organ
 	} else {
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
+				//AccountName:              "",
 				AccountId:                c.config.AccountID,
-				AccountName:              "",
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
