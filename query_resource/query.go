@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/utils"
+	"github.com/deepfence/cloud-scanner/output"
 	"github.com/deepfence/cloud-scanner/util"
 	_ "github.com/lib/pq"
 )
@@ -73,20 +75,15 @@ func clearPostgresqlCache() error {
 	return nil
 }
 
-func QueryAndRegisterResources(config util.Config, organizationAccountIDs []string) []error {
-	err := clearPostgresqlCache()
-	if err != nil {
-		log.Warn().Msgf("failed to clear postgresql cache: " + err.Error())
+func QueryAndRegisterResources(config util.Config, accountsToRefresh []util.AccountsToRefresh, completeRefresh bool) []error {
+	if completeRefresh {
+		err := clearPostgresqlCache()
+		if err != nil {
+			log.Warn().Msgf("failed to clear postgresql cache: " + err.Error())
+		}
 	}
-	log.Info().Msg("QueryAndRegisterResources after clearPostgresqlCache")
-	var accountsToScan []string
-	if len(organizationAccountIDs) > 0 {
-		accountsToScan = organizationAccountIDs
-	}
-	if !util.InSlice(config.CloudMetadata.ID, accountsToScan) {
-		accountsToScan = append(accountsToScan, config.CloudMetadata.ID)
-	}
-	log.Info().Msgf("Started querying resources for %s: %v", config.CloudProvider, accountsToScan)
+
+	log.Debug().Msgf("Started querying resources for %v", accountsToRefresh)
 
 	cloudResourcesFile, err := os.OpenFile(CloudResourcesFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
@@ -94,16 +91,40 @@ func QueryAndRegisterResources(config util.Config, organizationAccountIDs []stri
 	}
 	defer cloudResourcesFile.Close()
 
+	for _, account := range accountsToRefresh {
+		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusStarting, "")
+	}
+
 	count := 0
 	var errs = make([]error, 0)
-	for _, accountId := range accountsToScan {
+	for _, account := range accountsToRefresh {
+		log.Debug().Msgf("Started querying resources for %v", account)
+		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusInProgress, "")
+
 		for _, cloudResourceInfo := range cloudProviderToResourceMap[config.CloudProvider] {
-			ingestedCount, err := queryResources(accountId, cloudResourceInfo, config, cloudResourcesFile)
+			// If ResourceTypes is empty, refresh all resource types. Otherwise, only specified ones
+			if len(account.ResourceTypes) > 0 {
+				if !util.InSlice(cloudResourceInfo.Table, account.ResourceTypes) {
+					continue
+				}
+				err = clearPostgresqlCacheRows(config.CloudProvider + "_" + account.AccountID + "." + cloudResourceInfo.Table)
+				if err != nil {
+					errs = append(errs, err)
+					continue
+				}
+			}
+
+			ingestedCount, err := queryResources(account.AccountID, cloudResourceInfo, config, cloudResourcesFile)
 			if err != nil {
 				errs = append(errs, err)
 			}
+
+			log.Debug().Msgf("Cloud resources ingested in account %s, resource type %s: %d", account.AccountID, cloudResourceInfo.Table, ingestedCount)
 			count += ingestedCount
 		}
+
+		log.Debug().Msgf("Querying resources complete for %v", account)
+		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusSuccess, "")
 	}
 	log.Info().Msgf("Cloud resources ingested: %d", count)
 	return errs
@@ -118,41 +139,6 @@ func clearPostgresqlCacheRows(keyPrefix string) error {
 		return err
 	}
 	return nil
-}
-
-func QueryAndUpdateResources(config util.Config, cloudResourceTypesToRefresh map[string][]string) []error {
-	log.Info().Msgf("Started querying updated resources for %s", config.CloudProvider)
-
-	cloudResourcesFile, err := os.OpenFile(CloudResourcesFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return []error{err}
-	}
-	defer cloudResourcesFile.Close()
-
-	count := 0
-	var errs = make([]error, 0)
-	for accountID, resourceTypesToRefresh := range cloudResourceTypesToRefresh {
-		accountIDPrefix := config.CloudProvider + "_" + accountID + "."
-
-		for _, cloudResourceInfo := range cloudProviderToResourceMap[config.CloudProvider] {
-			if !util.InSlice(cloudResourceInfo.Table, resourceTypesToRefresh) {
-				continue
-			}
-			err = clearPostgresqlCacheRows(accountIDPrefix + cloudResourceInfo.Table)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			ingestedCount, err := queryResources(accountID, cloudResourceInfo, config, cloudResourcesFile)
-			if err != nil {
-				errs = append(errs, err)
-			}
-			count += ingestedCount
-		}
-	}
-
-	log.Info().Msgf("Cloud resources updated and ingested: %d", count)
-	return errs
 }
 
 func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, config util.Config, cloudResourcesFile *os.File) (int, error) {
@@ -190,7 +176,7 @@ func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, confi
 
 	var private_dns_name string
 	for _, obj := range objMap {
-		obj["account_id"] = util.GetNodeId(config.CloudProvider, accountId)
+		obj["account_id"] = util.GetNodeID(config.CloudProvider, accountId)
 		obj["cloud_provider"] = config.CloudProvider
 		if _, ok := obj["title"]; ok {
 			obj["name"] = fmt.Sprint(obj["title"])

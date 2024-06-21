@@ -64,9 +64,9 @@ type Config struct {
 }
 
 type MonitoredAccount struct {
-	AccountId   string `json:"account_id"`
+	AccountID   string `json:"account_id"`
 	AccountName string `json:"account_name"`
-	NodeId      string `json:"node_id"`
+	NodeID      string `json:"node_id"`
 }
 
 type ComplianceDoc struct {
@@ -144,4 +144,10 @@ type ComplianceGroup struct {
 type CloudTrailDetails struct {
 	AccountId string `json:"account_id"`
 	TrailName string `json:"trail_name"`
+}
+
+type AccountsToRefresh struct {
+	AccountID     string
+	NodeID        string
+	ResourceTypes []string
 }

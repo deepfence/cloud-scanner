@@ -157,7 +157,7 @@ func (c *CloudComplianceScan) ScanControl(scan *ctl.CloudComplianceScanDetails) 
 	}
 
 	log.Info().Msgf("compliance scan started: %s", scan.ScanId)
-	extrasForInProgress["node_id"] = util.GetNodeId(c.CloudProvider, scan.AccountId)
+	extrasForInProgress["node_id"] = util.GetNodeID(c.CloudProvider, scan.AccountId)
 
 	stopped := false
 	wg := sync.WaitGroup{}

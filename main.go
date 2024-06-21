@@ -100,7 +100,7 @@ func main() {
 		config.AWSCredentialSource = ""
 	}
 
-	config.NodeID = util.GetNodeId(config.CloudProvider, config.AccountID)
+	config.NodeID = util.GetNodeID(config.CloudProvider, config.AccountID)
 	config.Version = Version
 
 	configJson, err := json.MarshalIndent(config, "", "\t")
