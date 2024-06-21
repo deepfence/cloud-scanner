@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/Jeffail/tunny"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -29,6 +31,7 @@ import (
 	"github.com/deepfence/cloud-scanner/query_resource"
 	"github.com/deepfence/cloud-scanner/scanner"
 	"github.com/deepfence/cloud-scanner/util"
+	"google.golang.org/api/cloudresourcemanager/v1"
 )
 
 const DefaultScanConcurrency = 1
@@ -60,7 +63,7 @@ type ComplianceScanService struct {
 	cloudResources             *CloudResources
 	CloudTrails                []util.CloudTrailDetails
 	SocketPath                 *string
-	organizationAccountIDs     []util.OrganizationMonitoredAccount
+	organizationAccountIDs     []util.MonitoredAccount
 	organizationAccountIDsLock sync.RWMutex
 	CloudResourceChanges       cloud_resource_changes.CloudResourceChanges
 }
@@ -108,7 +111,7 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		cloudResources:         &CloudResources{},
 		CloudTrails:            cloudTrails,
 		SocketPath:             socketPath,
-		organizationAccountIDs: []util.OrganizationMonitoredAccount{},
+		organizationAccountIDs: []util.MonitoredAccount{},
 		CloudResourceChanges:   cloudResourceChanges,
 	}, err
 }
@@ -123,7 +126,7 @@ func (c *ComplianceScanService) GetOrganizationAccountIDs() []string {
 	return organizationAccountIDs
 }
 
-func (c *ComplianceScanService) GetOrganizationAccounts() []util.OrganizationMonitoredAccount {
+func (c *ComplianceScanService) GetOrganizationAccounts() []util.MonitoredAccount {
 	c.organizationAccountIDsLock.RLock()
 	defer c.organizationAccountIDsLock.RUnlock()
 	return c.organizationAccountIDs
@@ -157,14 +160,13 @@ func getAWSCredentialsConfig(ctx context.Context, accountID, region, roleName st
 }
 
 func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
-	organizationAccountIDs := []util.OrganizationMonitoredAccount{}
-
 	ctx := context.Background()
 	cfg, err := getAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
 	if err != nil {
 		return err
 	}
 
+	organizationAccountIDs := []util.MonitoredAccount{}
 	organizationsClient := organizations.NewFromConfig(cfg)
 	var nextToken *string
 	for {
@@ -185,7 +187,7 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 				continue
 			}
 			log.Debug().Msgf("Account ID %s - IAM role found", *account.Id)
-			organizationAccountIDs = append(organizationAccountIDs, util.OrganizationMonitoredAccount{
+			organizationAccountIDs = append(organizationAccountIDs, util.MonitoredAccount{
 				AccountId:   *account.Id,
 				AccountName: *account.Name,
 				NodeId:      util.GetNodeId(c.config.CloudProvider, *account.Id),
@@ -205,10 +207,80 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 }
 
 func (c *ComplianceScanService) fetchGCPOrganizationProjects() error {
+	projects, err := c.fetchGCPProjects()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch GCP projects")
+		return err
+	}
+	c.organizationAccountIDsLock.Lock()
+	c.organizationAccountIDs = projects
+	c.organizationAccountIDsLock.Unlock()
+
 	return nil
 }
 
-func (c *ComplianceScanService) fetchAzureTenantSubscriptions() error {
+func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, error) {
+	ctx := context.Background()
+	crm, err := cloudresourcemanager.NewService(ctx)
+	if err != nil {
+		return nil, err
+	}
+	projectsRequest := crm.Projects.List().PageSize(1000)
+	projectsResponse, err := projectsRequest.Do()
+	if err != nil {
+		return nil, err
+	}
+
+	organizationAccountIDs := make([]util.MonitoredAccount, len(projectsResponse.Projects))
+	for i, project := range projectsResponse.Projects {
+		organizationAccountIDs[i] = util.MonitoredAccount{
+			AccountId:   project.ProjectId,
+			AccountName: project.Name,
+			NodeId:      util.GetNodeId(c.config.CloudProvider, project.ProjectId),
+		}
+	}
+	return organizationAccountIDs, nil
+}
+
+func (c *ComplianceScanService) fetchAzureTenantSubscriptions() ([]util.MonitoredAccount, error) {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return nil, err
+	}
+	subscriptionClient, err := armsubscriptions.NewClient(cred, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	organizationAccountIDs := []util.MonitoredAccount{}
+	ctx := context.Background()
+	listPager := subscriptionClient.NewListPager(nil)
+	for listPager.More() {
+		page, err := listPager.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, val := range page.Value {
+			organizationAccountIDs = append(organizationAccountIDs, util.MonitoredAccount{
+				AccountId:   *val.SubscriptionID,
+				AccountName: *val.DisplayName,
+				NodeId:      util.GetNodeId(c.config.CloudProvider, *val.SubscriptionID),
+			})
+		}
+	}
+	return organizationAccountIDs, nil
+}
+
+func (c *ComplianceScanService) fetchAzureSubscriptions() error {
+	organizationAccountIDs, err := c.fetchAzureTenantSubscriptions()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch Azure subscriptions")
+		return err
+	}
+	c.organizationAccountIDsLock.Lock()
+	c.organizationAccountIDs = organizationAccountIDs
+	c.organizationAccountIDsLock.Unlock()
+
 	return nil
 }
 
@@ -232,11 +304,20 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 			if err != nil {
 				log.Warn().Msg(err.Error())
 			}
+		} else {
+			projects, err := c.fetchGCPProjects()
+			if err != nil {
+				log.Warn().Msg(err.Error())
+			} else {
+				if len(projects) == 1 {
+					c.config.AccountName = projects[0].AccountName
+				}
+			}
 		}
 		processGcpCredentials(c)
 	case util.CloudProviderAzure:
 		if c.config.IsOrganizationDeployment {
-			err = c.fetchAzureTenantSubscriptions()
+			err = c.fetchAzureSubscriptions()
 			if err != nil {
 				log.Warn().Msg(err.Error())
 			}
@@ -384,7 +465,7 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 				processGcpCredentials(c)
 			} else if c.config.CloudProvider == util.CloudProviderAzure {
 				if c.config.IsOrganizationDeployment {
-					err = c.fetchAzureTenantSubscriptions()
+					err = c.fetchAzureSubscriptions()
 					if err != nil {
 						log.Warn().Msg(err.Error())
 					}

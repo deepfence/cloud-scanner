@@ -58,23 +58,23 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.OrganizationMonitoredAccount) error {
+func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount) error {
 	nodeId := util.GetNodeId(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
 	if c.config.IsOrganizationDeployment {
 		monitoredAccounts := make([]client.ModelCloudNodeMonitoredAccount, len(monitoredOrganizationAccounts))
-		for _, account := range monitoredOrganizationAccounts {
-			monitoredAccounts = append(monitoredAccounts, client.ModelCloudNodeMonitoredAccount{
+		for i, account := range monitoredOrganizationAccounts {
+			monitoredAccounts[i] = client.ModelCloudNodeMonitoredAccount{
 				AccountId:   account.AccountId,
 				AccountName: &account.AccountName,
 				NodeId:      account.NodeId,
-			})
+			}
 		}
 
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				//AccountName:              "",
+				AccountName:              &c.config.AccountName,
 				AccountId:                c.config.AccountID,
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
@@ -88,7 +88,7 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Organ
 	} else {
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				//AccountName:              "",
+				AccountName:              &c.config.AccountName,
 				AccountId:                c.config.AccountID,
 				CloudProvider:            c.config.CloudProvider,
 				HostNodeId:               c.config.NodeID,
