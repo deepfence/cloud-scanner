@@ -42,7 +42,7 @@ func (c *CloudComplianceScan) parseControlResult(complianceDocs *[]util.Complian
 	}
 
 	nodeName := fmt.Sprintf("%s/%s", c.CloudProvider, accountId)
-	nodeId := util.GetNodeId(c.CloudProvider, accountId)
+	nodeId := util.GetNodeID(c.CloudProvider, accountId)
 
 	complianceDoc := util.ComplianceDoc{
 		Timestamp: util.GetDatetimeNow(),

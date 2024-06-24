@@ -59,8 +59,8 @@ func GetCloudMetadata() (cloud_metadata.CloudMetadata, error) {
 	return cloudMetadata, nil
 }
 
-func GetNodeId(cloudProvider string, accountId string) string {
-	return fmt.Sprintf("%s-%s-%s", NodeTypeCloudAccount, cloudProvider, accountId)
+func GetNodeID(cloudProvider string, accountID string) string {
+	return fmt.Sprintf("%s-%s-%s", NodeTypeCloudAccount, cloudProvider, accountID)
 }
 
 var randomLetters = []rune("abcdefghijklmnopqrstuvwxyz")

@@ -28,7 +28,6 @@ import (
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/cloud_resource_changes"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
-	"github.com/deepfence/cloud-scanner/query_resource"
 	"github.com/deepfence/cloud-scanner/scanner"
 	"github.com/deepfence/cloud-scanner/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
@@ -43,10 +42,6 @@ var (
 	jobCount        atomic.Int32
 )
 
-type CloudResources struct {
-	sync.RWMutex
-}
-
 type ScanToExecute struct {
 	ScanId      string
 	ScanService *ComplianceScanService
@@ -60,7 +55,6 @@ type ComplianceScanService struct {
 	StopScanMap                sync.Map
 	runningScanMap             map[string]struct{}
 	refreshResources           bool
-	cloudResources             *CloudResources
 	CloudTrails                []util.CloudTrailDetails
 	SocketPath                 *string
 	organizationAccountIDs     []util.MonitoredAccount
@@ -108,7 +102,6 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		StopScanMap:            stopScanMap,
 		runningScanMap:         runningScansMap,
 		refreshResources:       false,
-		cloudResources:         &CloudResources{},
 		CloudTrails:            cloudTrails,
 		SocketPath:             socketPath,
 		organizationAccountIDs: []util.MonitoredAccount{},
@@ -121,7 +114,7 @@ func (c *ComplianceScanService) GetOrganizationAccountIDs() []string {
 	defer c.organizationAccountIDsLock.RUnlock()
 	organizationAccountIDs := make([]string, len(c.organizationAccountIDs))
 	for i, accountID := range c.organizationAccountIDs {
-		organizationAccountIDs[i] = accountID.AccountId
+		organizationAccountIDs[i] = accountID.AccountID
 	}
 	return organizationAccountIDs
 }
@@ -188,9 +181,9 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 			}
 			log.Debug().Msgf("Account ID %s - IAM role found", *account.Id)
 			organizationAccountIDs = append(organizationAccountIDs, util.MonitoredAccount{
-				AccountId:   *account.Id,
+				AccountID:   *account.Id,
 				AccountName: *account.Name,
-				NodeId:      util.GetNodeId(c.config.CloudProvider, *account.Id),
+				NodeID:      util.GetNodeID(c.config.CloudProvider, *account.Id),
 			})
 		}
 		if accounts.NextToken == nil {
@@ -234,9 +227,9 @@ func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, err
 	organizationAccountIDs := make([]util.MonitoredAccount, len(projectsResponse.Projects))
 	for i, project := range projectsResponse.Projects {
 		organizationAccountIDs[i] = util.MonitoredAccount{
-			AccountId:   project.ProjectId,
+			AccountID:   project.ProjectId,
 			AccountName: project.Name,
-			NodeId:      util.GetNodeId(c.config.CloudProvider, project.ProjectId),
+			NodeID:      util.GetNodeID(c.config.CloudProvider, project.ProjectId),
 		}
 	}
 	return organizationAccountIDs, nil
@@ -262,9 +255,9 @@ func (c *ComplianceScanService) fetchAzureTenantSubscriptions() ([]util.Monitore
 		}
 		for _, val := range page.Value {
 			organizationAccountIDs = append(organizationAccountIDs, util.MonitoredAccount{
-				AccountId:   *val.SubscriptionID,
+				AccountID:   *val.SubscriptionID,
 				AccountName: *val.DisplayName,
-				NodeId:      util.GetNodeId(c.config.CloudProvider, *val.SubscriptionID),
+				NodeID:      util.GetNodeID(c.config.CloudProvider, *val.SubscriptionID),
 			})
 		}
 	}
@@ -498,21 +491,10 @@ func (c *ComplianceScanService) queryAndRegisterCloudResourcesPeriodically() {
 	refreshTicker := time.NewTicker(12 * time.Hour)
 	for {
 		jobCount.Add(1)
-		c.queryAndRegisterCloudResources()
+		c.FetchCloudResources()
 		jobCount.Add(-1)
 
 		<-refreshTicker.C
-	}
-}
-
-func (c *ComplianceScanService) queryAndRegisterCloudResources() {
-	log.Info().Msg("Querying Resources")
-	c.cloudResources.Lock()
-	defer c.cloudResources.Unlock()
-
-	errorsCollected := query_resource.QueryAndRegisterResources(c.config, c.GetOrganizationAccountIDs())
-	if len(errorsCollected) > 0 {
-		log.Error().Msgf("Error in sending resources, errors: %+v", errorsCollected)
 	}
 }
 
@@ -529,17 +511,23 @@ func (c *ComplianceScanService) refreshResourcesFromTrailPeriodically() {
 }
 
 func (c *ComplianceScanService) refreshResourcesFromTrail() {
+	log.Info().Msg("Started updating cloud resources")
 	cloudResourceTypesToRefresh, _ := c.CloudResourceChanges.GetResourceTypesToRefresh()
 	if len(cloudResourceTypesToRefresh) == 0 {
 		return
 	}
-
-	c.cloudResources.Lock()
-	errorsCollected := query_resource.QueryAndUpdateResources(c.config, cloudResourceTypesToRefresh)
-	if len(errorsCollected) > 0 {
-		log.Error().Msgf("Error in sending resources  %+v", errorsCollected)
+	accountsToRefresh := make([]util.AccountsToRefresh, len(cloudResourceTypesToRefresh))
+	index := 0
+	for accountID, resourceTypes := range cloudResourceTypesToRefresh {
+		accountsToRefresh[index] = util.AccountsToRefresh{
+			AccountID:     accountID,
+			NodeID:        util.GetNodeID(c.config.CloudProvider, accountID),
+			ResourceTypes: resourceTypes,
+		}
+		index += 1
 	}
-	c.cloudResources.Unlock()
+	c.FetchCloudAccountResources(accountsToRefresh, false)
+	log.Info().Msg("Updating cloud resources complete")
 }
 
 func executeScans(rInterface interface{}) interface{} {
@@ -708,7 +696,8 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 			go func() {
 				jobCount.Add(1)
 				defer jobCount.Add(-1)
-				c.queryAndRegisterCloudResources()
+				// TODO: refresh for selected accounts
+				c.FetchCloudResources()
 			}()
 		case ctl.CloudScannerJobCount:
 			count := int(jobCount.Load())

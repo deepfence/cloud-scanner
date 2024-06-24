@@ -59,16 +59,16 @@ func NewClient(config util.Config) (*Client, error) {
 }
 
 func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount) error {
-	nodeId := util.GetNodeId(c.config.CloudProvider, c.config.AccountID)
+	nodeId := util.GetNodeID(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
 	if c.config.IsOrganizationDeployment {
 		monitoredAccounts := make([]client.ModelCloudNodeMonitoredAccount, len(monitoredOrganizationAccounts))
 		for i := range monitoredOrganizationAccounts {
 			monitoredAccounts[i] = client.ModelCloudNodeMonitoredAccount{
-				AccountId:   monitoredOrganizationAccounts[i].AccountId,
+				AccountId:   monitoredOrganizationAccounts[i].AccountID,
 				AccountName: &monitoredOrganizationAccounts[i].AccountName,
-				NodeId:      monitoredOrganizationAccounts[i].NodeId,
+				NodeId:      monitoredOrganizationAccounts[i].NodeID,
 			}
 		}
 

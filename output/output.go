@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	scanStatusFilename = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
-	ScanFilename       = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
+	scanStatusFilename                 = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
+	cloudResourceRefreshStatusFilename = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resource-refresh-log/cloud_resource_refresh_status.log"
+	ScanFilename                       = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
 )
 
 func WriteScanStatus(status, scanID, scanMessage string) {
@@ -31,6 +32,26 @@ func WriteScanStatus(status, scanID, scanMessage string) {
 	err = writeToFile(byteJSON, scanStatusFilename)
 	if err != nil {
 		log.Error().Msgf("Error writing status data to %s, Error: %s", scanStatusFilename, err)
+		return
+	}
+}
+
+func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage string) {
+	var scanLogDoc = make(map[string]interface{})
+	scanLogDoc["cloud_node_id"] = nodeID
+	scanLogDoc["refresh_status"] = refreshStatus
+	scanLogDoc["refresh_message"] = refreshMessage
+
+	byteJSON, err := json.Marshal(scanLogDoc)
+	if err != nil {
+		log.Error().Msgf("Error marshalling json for status: %s", err)
+		return
+	}
+
+	log.Debug().Msgf("Writing status: %s, %s", refreshStatus, refreshMessage)
+	err = writeToFile(byteJSON, cloudResourceRefreshStatusFilename)
+	if err != nil {
+		log.Error().Msgf("Error writing status data to %s, Error: %s", cloudResourceRefreshStatusFilename, err)
 		return
 	}
 }
