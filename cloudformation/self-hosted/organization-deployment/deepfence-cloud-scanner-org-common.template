@@ -299,7 +299,7 @@ Resources:
       - - !Ref 'AWS::StackName'
         - OrgDeployment
       TemplateURL: >-
-        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-org-mgmt-console.template
+        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-org-ecs.template
   CloudScannerDeploymentComplete:
     Type: 'AWS::CloudFormation::WaitConditionHandle'
   CloudScannerDeploymentCompleteWait:
@@ -347,7 +347,7 @@ Resources:
       - - !Ref 'AWS::StackName'
         - Roles
       TemplateURL: >-
-        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-roles.template
+        https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/organization-deployment/deepfence-cloud-scanner-member-roles.template
   ReadOnlyRole:
     Type: 'AWS::IAM::Role'
     DependsOn: CloudScannerDeploymentCompleteWait

@@ -27,7 +27,7 @@ func runServices(config util.Config, socketPath *string) {
 	log.Info().Msgf("Registering with Deepfence management console")
 	err = svc.RunRegisterServices()
 	if err != nil {
-		log.Error().Msgf("Error: %v", err)
+		log.Fatal().Msgf("Error: %v", err)
 	}
 }
 
@@ -93,7 +93,7 @@ func main() {
 		if config.AWSCredentialSource != "EcsContainer" && config.AWSCredentialSource != "Ec2InstanceMetadata" && config.AWSCredentialSource != "Environment" {
 			log.Fatal().Msgf("invalid AWS_CREDENTIAL_SOURCE - should be one of EcsContainer, Ec2InstanceMetadata, Environment")
 		}
-		if config.RoleName == "" {
+		if config.IsOrganizationDeployment && config.RoleName == "" {
 			log.Fatal().Msgf("ROLE_NAME is required in aws installation")
 		}
 	default:

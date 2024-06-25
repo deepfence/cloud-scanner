@@ -152,11 +152,11 @@ func getAWSCredentialsConfig(ctx context.Context, accountID, region, roleName st
 	return cfg, err
 }
 
-func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
+func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.AccountsToRefresh, error) {
 	ctx := context.Background()
 	cfg, err := getAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	organizationAccountIDs := []util.MonitoredAccount{}
@@ -167,7 +167,7 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 			NextToken: nextToken,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(accounts.Accounts) == 0 {
 			break
@@ -193,23 +193,56 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() error {
 	}
 
 	c.organizationAccountIDsLock.Lock()
+
+	accountsMap := make(map[string]struct{}, len(c.organizationAccountIDs))
+	for _, account := range c.organizationAccountIDs {
+		accountsMap[account.AccountID] = struct{}{}
+	}
+
+	var newAccounts []util.AccountsToRefresh
+	for _, account := range organizationAccountIDs {
+		if _, ok := accountsMap[account.AccountID]; !ok {
+			newAccounts = append(newAccounts, util.AccountsToRefresh{
+				AccountID: account.AccountID,
+				NodeID:    account.NodeID,
+			})
+		}
+	}
+
 	c.organizationAccountIDs = organizationAccountIDs
 	c.organizationAccountIDsLock.Unlock()
 
-	return nil
+	return newAccounts, nil
 }
 
-func (c *ComplianceScanService) fetchGCPOrganizationProjects() error {
+func (c *ComplianceScanService) fetchGCPOrganizationProjects() ([]util.AccountsToRefresh, error) {
 	projects, err := c.fetchGCPProjects()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to fetch GCP projects")
-		return err
+		return nil, err
 	}
+
 	c.organizationAccountIDsLock.Lock()
+
+	accountsMap := make(map[string]struct{}, len(c.organizationAccountIDs))
+	for _, account := range c.organizationAccountIDs {
+		accountsMap[account.AccountID] = struct{}{}
+	}
+
+	var newAccounts []util.AccountsToRefresh
+	for _, account := range projects {
+		if _, ok := accountsMap[account.AccountID]; !ok {
+			newAccounts = append(newAccounts, util.AccountsToRefresh{
+				AccountID: account.AccountID,
+				NodeID:    account.NodeID,
+			})
+		}
+	}
+
 	c.organizationAccountIDs = projects
 	c.organizationAccountIDsLock.Unlock()
 
-	return nil
+	return newAccounts, nil
 }
 
 func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, error) {
@@ -264,17 +297,34 @@ func (c *ComplianceScanService) fetchAzureTenantSubscriptions() ([]util.Monitore
 	return organizationAccountIDs, nil
 }
 
-func (c *ComplianceScanService) fetchAzureSubscriptions() error {
+func (c *ComplianceScanService) fetchAzureSubscriptions() ([]util.AccountsToRefresh, error) {
 	organizationAccountIDs, err := c.fetchAzureTenantSubscriptions()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to fetch Azure subscriptions")
-		return err
+		return nil, err
 	}
+
 	c.organizationAccountIDsLock.Lock()
+
+	accountsMap := make(map[string]struct{}, len(c.organizationAccountIDs))
+	for _, account := range c.organizationAccountIDs {
+		accountsMap[account.AccountID] = struct{}{}
+	}
+
+	var newAccounts []util.AccountsToRefresh
+	for _, account := range organizationAccountIDs {
+		if _, ok := accountsMap[account.AccountID]; !ok {
+			newAccounts = append(newAccounts, util.AccountsToRefresh{
+				AccountID: account.AccountID,
+				NodeID:    account.NodeID,
+			})
+		}
+	}
+
 	c.organizationAccountIDs = organizationAccountIDs
 	c.organizationAccountIDsLock.Unlock()
 
-	return nil
+	return newAccounts, nil
 }
 
 func (c *ComplianceScanService) RunRegisterServices() error {
@@ -285,15 +335,40 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	switch c.config.CloudProvider {
 	case util.CloudProviderAWS:
 		if c.config.IsOrganizationDeployment {
-			err = c.fetchAWSOrganizationAccountIDs()
+			_, err = c.fetchAWSOrganizationAccountIDs()
 			if err != nil {
-				log.Warn().Msg(err.Error())
+				log.Error().Msg(err.Error())
+
+				fetchAWSOrganizationAccounts := func() error {
+					var fetchErr error
+					refreshTicker := time.NewTicker(2 * time.Minute)
+					defer refreshTicker.Stop()
+					stopTicker := time.NewTicker(10 * time.Minute)
+					defer stopTicker.Stop()
+					for {
+						select {
+						case <-refreshTicker.C:
+							_, fetchErr = c.fetchAWSOrganizationAccountIDs()
+							if fetchErr != nil {
+								log.Error().Msg(fetchErr.Error())
+							} else {
+								return nil
+							}
+						case <-stopTicker.C:
+							return fetchErr
+						}
+					}
+				}
+				err = fetchAWSOrganizationAccounts()
+				if err != nil {
+					return err
+				}
 			}
 		}
 		processAwsCredentials(c)
 	case util.CloudProviderGCP:
 		if c.config.IsOrganizationDeployment {
-			err = c.fetchGCPOrganizationProjects()
+			_, err = c.fetchGCPOrganizationProjects()
 			if err != nil {
 				log.Warn().Msg(err.Error())
 			}
@@ -310,7 +385,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		processGcpCredentials(c)
 	case util.CloudProviderAzure:
 		if c.config.IsOrganizationDeployment {
-			err = c.fetchAzureSubscriptions()
+			_, err = c.fetchAzureSubscriptions()
 			if err != nil {
 				log.Warn().Msg(err.Error())
 			}
@@ -387,8 +462,12 @@ func processAwsCredentials(c *ComplianceScanService) {
 
 	steampipeConfigFile = "connection \"aws_all\" {\n  type = \"aggregator\" \n plugin      = \"aws\" \n  connections = [\"aws_*\"] \n} \n"
 	for _, accId := range allAccountIDs {
-		awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
-		steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"aws\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+		if c.config.RoleName == "" {
+			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"aws\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+		} else {
+			awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
+			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"aws\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+		}
 	}
 
 	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/aws.spc", steampipeConfigFile)
@@ -439,10 +518,11 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 	for {
 		select {
 		case <-ticker.C:
+			var newAccounts []util.AccountsToRefresh
 			var err error
 			if c.config.CloudProvider == util.CloudProviderAWS {
 				if c.config.IsOrganizationDeployment {
-					err = c.fetchAWSOrganizationAccountIDs()
+					newAccounts, err = c.fetchAWSOrganizationAccountIDs()
 					if err != nil {
 						log.Warn().Msg(err.Error())
 					}
@@ -450,7 +530,7 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 				processAwsCredentials(c)
 			} else if c.config.CloudProvider == util.CloudProviderGCP {
 				if c.config.IsOrganizationDeployment {
-					err = c.fetchGCPOrganizationProjects()
+					newAccounts, err = c.fetchGCPOrganizationProjects()
 					if err != nil {
 						log.Warn().Msg(err.Error())
 					}
@@ -458,12 +538,16 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 				processGcpCredentials(c)
 			} else if c.config.CloudProvider == util.CloudProviderAzure {
 				if c.config.IsOrganizationDeployment {
-					err = c.fetchAzureSubscriptions()
+					newAccounts, err = c.fetchAzureSubscriptions()
 					if err != nil {
 						log.Warn().Msg(err.Error())
 					}
 				}
 				processAzureCredentials(c)
+			}
+
+			if len(newAccounts) > 0 {
+				c.FetchCloudAccountResources(newAccounts, false)
 			}
 		}
 	}
