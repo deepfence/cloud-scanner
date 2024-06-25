@@ -403,6 +403,38 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	}
 	log.Info().Msgf("CloudResourceChanges Initialization completed")
 
+	// Registration should be done first before starting other services
+	err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+	if err != nil {
+		log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
+
+		registerCloudScanner := func() error {
+			var registerErr error
+			refreshTicker := time.NewTicker(30 * time.Second)
+			defer refreshTicker.Stop()
+			stopTicker := time.NewTicker(5 * time.Minute)
+			defer stopTicker.Stop()
+			for {
+				select {
+				case <-refreshTicker.C:
+					registerErr = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+					if registerErr != nil {
+						log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
+					} else {
+						return nil
+					}
+				case <-stopTicker.C:
+					return registerErr
+				}
+			}
+		}
+		err = registerCloudScanner()
+		if err != nil {
+			log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
+			return err
+		}
+	}
+
 	go c.loopRegister()
 
 	if c.config.IsOrganizationDeployment {
@@ -547,6 +579,10 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 			}
 
 			if len(newAccounts) > 0 {
+				err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+				if err != nil {
+					log.Error().Msgf("Error in registering cloud account: %s", err.Error())
+				}
 				c.FetchCloudAccountResources(newAccounts, false)
 			}
 		}
@@ -554,15 +590,11 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 }
 
 func (c *ComplianceScanService) loopRegister() {
-	err := c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
-	if err != nil {
-		log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
-	}
-
-	ticker1 := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
+	var err error
 	for {
 		select {
-		case <-ticker1.C:
+		case <-ticker.C:
 			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
 			if err != nil {
 				log.Error().Msgf("Error in registering cloud account: %s", err.Error())
