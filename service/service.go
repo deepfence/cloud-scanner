@@ -218,7 +218,6 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.Account
 func (c *ComplianceScanService) fetchGCPOrganizationProjects() ([]util.AccountsToRefresh, error) {
 	projects, err := c.fetchGCPProjects()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch GCP projects")
 		return nil, err
 	}
 
@@ -249,11 +248,13 @@ func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, err
 	ctx := context.Background()
 	crm, err := cloudresourcemanager.NewService(ctx)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch GCP projects")
 		return nil, err
 	}
 	projectsRequest := crm.Projects.List().PageSize(1000)
 	projectsResponse, err := projectsRequest.Do()
 	if err != nil {
+		log.Error().Err(err).Msg("failed to fetch GCP projects")
 		return nil, err
 	}
 
