@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 )
@@ -41,6 +42,7 @@ func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage strin
 	scanLogDoc["cloud_node_id"] = nodeID
 	scanLogDoc["refresh_status"] = refreshStatus
 	scanLogDoc["refresh_message"] = refreshMessage
+	scanLogDoc["updated_at"] = time.Now().UTC().UnixMilli()
 
 	byteJSON, err := json.Marshal(scanLogDoc)
 	if err != nil {
