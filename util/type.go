@@ -1,6 +1,9 @@
 package util
 
 import (
+	"fmt"
+	"os"
+
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 )
 
@@ -150,4 +153,20 @@ type AccountsToRefresh struct {
 	AccountID     string
 	NodeID        string
 	ResourceTypes []string
+}
+
+var (
+	HomeDirectory string
+
+	SteampipeAWSPluginVersion     = fmt.Sprintf("aws@%s", os.Getenv("STEAMPIPE_AWS_PLUGIN_VERSION"))
+	SteampipeGCPPluginVersion     = fmt.Sprintf("gcp@%s", os.Getenv("STEAMPIPE_GCP_PLUGIN_VERSION"))
+	SteampipeAzurePluginVersion   = fmt.Sprintf("azure@%s", os.Getenv("STEAMPIPE_AZURE_PLUGIN_VERSION"))
+	SteampipeAzureADPluginVersion = fmt.Sprintf("azuread@%s", os.Getenv("STEAMPIPE_AZURE_AD_PLUGIN_VERSION"))
+)
+
+func init() {
+	HomeDirectory = os.Getenv("HOME_DIR")
+	if HomeDirectory == "" {
+		HomeDirectory = "/home/deepfence"
+	}
 }

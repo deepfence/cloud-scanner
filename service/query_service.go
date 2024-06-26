@@ -1,10 +1,38 @@
 package service
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/query_resource"
 	"github.com/deepfence/cloud-scanner/util"
 )
+
+type ResourceRefreshLock struct {
+	resourceRefreshCount atomic.Int32
+	mutex                sync.Mutex
+}
+
+func NewResourceRefreshLock() *ResourceRefreshLock {
+	return &ResourceRefreshLock{}
+}
+
+func (r *ResourceRefreshLock) Lock() {
+	r.resourceRefreshCount.Add(1)
+	log.Debug().Msgf("Resource refresh count: %d", r.resourceRefreshCount.Load())
+	r.mutex.Lock()
+}
+
+func (r *ResourceRefreshLock) Unlock() {
+	r.resourceRefreshCount.Add(-1)
+	log.Debug().Msgf("Resource refresh count: %d", r.resourceRefreshCount.Load())
+	r.mutex.Unlock()
+}
+
+func (r *ResourceRefreshLock) GetRefreshCount() int32 {
+	return r.resourceRefreshCount.Load()
+}
 
 // FetchCloudResources Fetch cloud resources from all accounts
 func (c *ComplianceScanService) FetchCloudResources() {
