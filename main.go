@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
@@ -14,6 +18,11 @@ import (
 
 var (
 	socketPath = flag.String("socket-path", "", "Path to socket")
+
+	steampipeAWSPluginVersion     = fmt.Sprintf("aws@%s", os.Getenv("STEAMPIPE_AWS_PLUGIN_VERSION"))
+	steampipeGCPPluginVersion     = fmt.Sprintf("gcp@%s", os.Getenv("STEAMPIPE_GCP_PLUGIN_VERSION"))
+	steampipeAzurePluginVersion   = fmt.Sprintf("azure@%s", os.Getenv("STEAMPIPE_AZURE_PLUGIN_VERSION"))
+	steampipeAzureADPluginVersion = fmt.Sprintf("azuread@%s", os.Getenv("STEAMPIPE_AZURE_AD_PLUGIN_VERSION"))
 )
 
 var Version string
@@ -106,6 +115,32 @@ func main() {
 	configJson, err := json.MarshalIndent(config, "", "\t")
 	if err == nil {
 		log.Info().Msgf("Using config: %s", string(configJson))
+	}
+
+	// Disable plugins of other clouds
+	var uninstallPlugins []string
+	var deletePluginConfigs []string
+	switch config.CloudProvider {
+	case util.CloudProviderAWS:
+		uninstallPlugins = []string{steampipeGCPPluginVersion, steampipeAzurePluginVersion, steampipeAzureADPluginVersion}
+		deletePluginConfigs = []string{util.HomeDirectory + "/.steampipe/config/gcp.spc", util.HomeDirectory + "/.steampipe/config/azure.spc", util.HomeDirectory + "/.steampipe/config/azuread.spc"}
+	case util.CloudProviderGCP:
+		uninstallPlugins = []string{steampipeAWSPluginVersion, steampipeAzurePluginVersion, steampipeAzureADPluginVersion}
+		deletePluginConfigs = []string{util.HomeDirectory + "/.steampipe/config/aws.spc", util.HomeDirectory + "/.steampipe/config/azure.spc", util.HomeDirectory + "/.steampipe/config/azuread.spc"}
+	case util.CloudProviderAzure:
+		uninstallPlugins = []string{steampipeAWSPluginVersion, steampipeGCPPluginVersion}
+		deletePluginConfigs = []string{util.HomeDirectory + "/.steampipe/config/aws.spc", util.HomeDirectory + "/.steampipe/config/gcp.spc"}
+	}
+	for _, configFile := range deletePluginConfigs {
+		os.Remove(configFile)
+	}
+	for _, plugin := range uninstallPlugins {
+		stdOut, stdErr := exec.Command("bash", "-c", fmt.Sprintf("steampipe plugin uninstall %s", plugin)).CombinedOutput()
+		if stdErr != nil {
+			log.Error().Msgf(string(stdOut))
+			log.Error().Msgf(stdErr.Error())
+		}
+		time.Sleep(1 * time.Second)
 	}
 
 	runServices(config, socketPath)
