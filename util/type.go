@@ -1,6 +1,8 @@
 package util
 
 import (
+	"os"
+
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 )
 
@@ -150,4 +152,15 @@ type AccountsToRefresh struct {
 	AccountID     string
 	NodeID        string
 	ResourceTypes []string
+}
+
+var (
+	HomeDirectory string
+)
+
+func init() {
+	HomeDirectory = os.Getenv("HOME_DIR")
+	if HomeDirectory == "" {
+		HomeDirectory = "/home/deepfence"
+	}
 }
