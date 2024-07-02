@@ -17,7 +17,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
-	"github.com/Jeffail/tunny"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
@@ -33,13 +32,8 @@ import (
 	"google.golang.org/api/cloudresourcemanager/v1"
 )
 
-const DefaultScanConcurrency = 1
-
 var (
-	scanConcurrency int
-	scanPool        *tunny.Pool
-	HomeDirectory   string
-	jobCount        atomic.Int32
+	jobCount atomic.Int32
 )
 
 type ScanToExecute struct {
@@ -60,19 +54,7 @@ type ComplianceScanService struct {
 	organizationAccountIDs     []util.MonitoredAccount
 	organizationAccountIDsLock sync.RWMutex
 	CloudResourceChanges       cloud_resource_changes.CloudResourceChanges
-}
-
-func init() {
-	var err error
-	scanConcurrency, err = strconv.Atoi(os.Getenv("SCAN_CONCURRENCY"))
-	if err != nil {
-		scanConcurrency = DefaultScanConcurrency
-	}
-	scanPool = tunny.NewFunc(scanConcurrency, executeScans)
-	HomeDirectory = os.Getenv("HOME_DIR")
-	if HomeDirectory == "" {
-		HomeDirectory = "/home/deepfence"
-	}
+	ResourceRefreshLock        *ResourceRefreshLock
 }
 
 func NewComplianceScanService(config util.Config, socketPath *string) (*ComplianceScanService, error) {
@@ -87,9 +69,6 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		log.Error().Msgf("deepfence.NewClient(config) error: %s", err.Error())
 		return nil, err
 	}
-	var remainingScansMap, stopScanMap sync.Map
-	runningScansMap := make(map[string]struct{})
-	cloudTrails := make([]util.CloudTrailDetails, 0)
 	cloudResourceChanges, err := cloud_resource_changes.NewCloudResourceChanges(config)
 	if err != nil {
 		return nil, err
@@ -98,14 +77,15 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		scanner:                cloudComplianceScan,
 		dfClient:               dfClient,
 		config:                 config,
-		RemainingScansMap:      remainingScansMap,
-		StopScanMap:            stopScanMap,
-		runningScanMap:         runningScansMap,
+		RemainingScansMap:      sync.Map{},
+		StopScanMap:            sync.Map{},
+		runningScanMap:         make(map[string]struct{}),
 		refreshResources:       false,
-		CloudTrails:            cloudTrails,
+		CloudTrails:            make([]util.CloudTrailDetails, 0),
 		SocketPath:             socketPath,
 		organizationAccountIDs: []util.MonitoredAccount{},
 		CloudResourceChanges:   cloudResourceChanges,
+		ResourceRefreshLock:    NewResourceRefreshLock(),
 	}, err
 }
 
@@ -442,7 +422,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		go c.refreshOrganizationAccountIDs()
 	}
 
-	go c.queryAndRegisterCloudResourcesPeriodically()
+	//go c.queryAndRegisterCloudResourcesPeriodically()
 	go c.refreshResourcesFromTrailPeriodically()
 
 	go c.listenForScans()
@@ -453,10 +433,10 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 }
 
 func processAzureCredentials(c *ComplianceScanService) {
-	steampipeConfigFile := "connection \"azure_all\" {\n  type = \"aggregator\" \n plugin      = \"azure\" \n  connections = [\"azure_*\"] \n} \n"
+	steampipeConfigFile := "connection \"azure_all\" {\n  type = \"aggregator\" \n plugin      = \"" + util.SteampipeAzurePluginVersion + "\"\n  connections = [\"azure_*\"] \n} \n"
 	if c.config.IsOrganizationDeployment {
 		for _, accountID := range c.GetOrganizationAccountIDs() {
-			steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin = \"azure\"\n " +
+			steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin = \"" + util.SteampipeAzurePluginVersion + "\"\n " +
 				"  subscription_id = \"" + accountID + "\"\n" +
 				"  tenant_id = \"" + c.config.OrganizationID + "\"\n" +
 				"  client_id = \"" + os.Getenv("AZURE_CLIENT_ID") + "\"\n" +
@@ -464,14 +444,14 @@ func processAzureCredentials(c *ComplianceScanService) {
 				"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 		}
 	} else {
-		steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin = \"azure\"\n " +
+		steampipeConfigFile += "\nconnection \"azure_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin = \"" + util.SteampipeAzurePluginVersion + "\"\n " +
 			"  subscription_id = \"" + c.config.AccountID + "\"\n" +
 			"  tenant_id = \"" + c.config.OrganizationID + "\"\n" +
 			"  client_id = \"" + os.Getenv("AZURE_CLIENT_ID") + "\"\n" +
 			"  client_secret = \"" + os.Getenv("AZURE_CLIENT_SECRET") + "\"\n" +
 			"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 	}
-	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/azure.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/azure.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
@@ -493,24 +473,24 @@ func processAwsCredentials(c *ComplianceScanService) {
 	var steampipeConfigFile string
 	var awsCredentialsFile string
 
-	steampipeConfigFile = "connection \"aws_all\" {\n  type = \"aggregator\" \n plugin      = \"aws\" \n  connections = [\"aws_*\"] \n} \n"
+	steampipeConfigFile = "connection \"aws_all\" {\n  type = \"aggregator\" \n plugin      = \"" + util.SteampipeAWSPluginVersion + "\"\n  connections = [\"aws_*\"] \n} \n"
 	for _, accId := range allAccountIDs {
 		if c.config.RoleName == "" {
-			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"aws\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 		} else {
 			awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
-			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"aws\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 		}
 	}
 
-	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/aws.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/aws.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
 
 	if len(awsCredentialsFile) > 0 {
-		os.MkdirAll(HomeDirectory+"/.aws", os.ModePerm)
-		err = saveFileOverwrite(HomeDirectory+"/.aws/credentials", awsCredentialsFile)
+		os.MkdirAll(util.HomeDirectory+"/.aws", os.ModePerm)
+		err = saveFileOverwrite(util.HomeDirectory+"/.aws/credentials", awsCredentialsFile)
 		if err != nil {
 			log.Fatal().Msgf(err.Error())
 		}
@@ -518,15 +498,15 @@ func processAwsCredentials(c *ComplianceScanService) {
 }
 
 func processGcpCredentials(c *ComplianceScanService) {
-	steampipeConfigFile := "connection \"gcp_all\" {\n  type = \"aggregator\" \n plugin      = \"gcp\" \n  connections = [\"gcp_*\"] \n} \n"
+	steampipeConfigFile := "connection \"gcp_all\" {\n  type = \"aggregator\" \n plugin      = \"" + util.SteampipeGCPPluginVersion + "\"\n  connections = [\"gcp_*\"] \n} \n"
 	if c.config.IsOrganizationDeployment {
 		for _, accountID := range c.GetOrganizationAccountIDs() {
-			steampipeConfigFile += "connection \"gcp_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin  = \"gcp\"\n  project = \"" + accountID + "\"\n}\n"
+			steampipeConfigFile += "connection \"gcp_" + strings.Replace(accountID, "-", "", -1) + "\" {\n  plugin  = \"" + util.SteampipeGCPPluginVersion + "\"\n  project = \"" + accountID + "\"\n}\n"
 		}
 	} else {
-		steampipeConfigFile += "connection \"gcp_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin  = \"gcp\"\n  project = \"" + c.config.AccountID + "\"\n}\n"
+		steampipeConfigFile += "connection \"gcp_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin  = \"" + util.SteampipeGCPPluginVersion + "\"\n  project = \"" + c.config.AccountID + "\"\n}\n"
 	}
-	err := saveFileOverwrite(HomeDirectory+"/.steampipe/config/gcp.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/gcp.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
@@ -584,7 +564,15 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 				if err != nil {
 					log.Error().Msgf("Error in registering cloud account: %s", err.Error())
 				}
-				c.FetchCloudAccountResources(newAccounts, false)
+
+				log.Info().Msgf("Restarting the steampipe service")
+				util.RestartSteampipeService()
+
+				go func() {
+					c.ResourceRefreshLock.Lock()
+					defer c.ResourceRefreshLock.Unlock()
+					c.FetchCloudAccountResources(newAccounts, false)
+				}()
 			}
 		}
 	}
@@ -604,25 +592,27 @@ func (c *ComplianceScanService) loopRegister() {
 	}
 }
 
-func (c *ComplianceScanService) queryAndRegisterCloudResourcesPeriodically() {
-	refreshTicker := time.NewTicker(12 * time.Hour)
-	for {
-		jobCount.Add(1)
-		c.FetchCloudResources()
-		jobCount.Add(-1)
-
-		<-refreshTicker.C
-	}
-}
+//func (c *ComplianceScanService) queryAndRegisterCloudResourcesPeriodically() {
+//	refreshTicker := time.NewTicker(12 * time.Hour)
+//	for {
+//		go func() {
+//			c.ResourceRefreshLock.Lock()
+//			defer c.ResourceRefreshLock.Unlock()
+//			c.FetchCloudResources()
+//		}()
+//
+//		<-refreshTicker.C
+//	}
+//}
 
 func (c *ComplianceScanService) refreshResourcesFromTrailPeriodically() {
 	refreshTicker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
 		case <-refreshTicker.C:
-			jobCount.Add(1)
-			c.refreshResourcesFromTrail()
-			jobCount.Add(-1)
+			go func() {
+				c.refreshResourcesFromTrail()
+			}()
 		}
 	}
 }
@@ -643,50 +633,30 @@ func (c *ComplianceScanService) refreshResourcesFromTrail() {
 		}
 		index += 1
 	}
+
+	c.ResourceRefreshLock.Lock()
+	defer c.ResourceRefreshLock.Unlock()
 	c.FetchCloudAccountResources(accountsToRefresh, false)
 	log.Info().Msg("Updating cloud resources complete")
 }
 
-func executeScans(rInterface interface{}) interface{} {
-	s, ok := rInterface.(*ScanToExecute)
-	if !ok {
-		log.Error().Msgf("Error processing compliance scan service")
-		return false
-	}
-	c := s.ScanService
-	log.Debug().Msgf("s.RemainingScansMap: %+v", c.RemainingScansMap)
-	scanId := s.ScanId
-	log.Info().Msgf("executeScans called for: %s", scanId)
-	scanDetails, ok := c.RemainingScansMap.Load(scanId)
-	if !ok {
-		log.Error().Msgf("No scan found for scan id %s", scanId)
-		return false
-	}
+func (c *ComplianceScanService) executeScans(scan ctl.CloudComplianceScanDetails) interface{} {
+	log.Debug().Msgf("s.RemainingScansMap: %+v", &c.RemainingScansMap)
+	log.Info().Msgf("executeScans called for: %s", scan)
 
-	scan, ok := scanDetails.(ctl.CloudComplianceScanDetails)
-	if !ok {
-		log.Error().Msgf("Invalid scan details for scan id %s: %+v", scanId, scan)
-		return false
-	}
-
-	if _, ok := c.runningScanMap[scanId]; !ok {
-		log.Info().Msgf("Running scan with id: %s", scanId)
-		c.runningScanMap[scanId] = struct{}{}
+	if _, ok := c.runningScanMap[scan.AccountId]; !ok {
+		log.Info().Msgf("Running scan with id: %s", scan.ScanId)
+		c.runningScanMap[scan.AccountId] = struct{}{}
 		err := c.scanner.ScanControl(&scan)
 		if err != nil {
 			log.Error().Msg(err.Error())
 		}
-		c.delayedRemoveFromRunningScanMap(scanId)
 	} else {
-		log.Info().Msgf("Scan already running with scanid: %s", scanId)
+		log.Info().Msgf("Scan already running with scanid: %s", scan.ScanId)
 	}
+	c.RemainingScansMap.Delete(scan.AccountId)
+	delete(c.runningScanMap, scan.AccountId)
 	return true
-}
-
-func (c *ComplianceScanService) delayedRemoveFromRunningScanMap(scanId string) {
-	// time.Sleep(5 * time.Minute)
-	c.RemainingScansMap.Delete(scanId)
-	delete(c.runningScanMap, scanId)
 }
 
 func (c *ComplianceScanService) runHttpServer() {
@@ -769,19 +739,14 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 				continue
 			}
 			log.Info().Msgf("Received start scan request, scanId: %s", args.ScanDetails.ScanId)
-			scanId := args.ScanDetails.ScanId
-			if _, ok := c.RemainingScansMap.Load(scanId); !ok {
-				log.Debug().Msgf("Adding pending scan for scan id as not present earlier: %s", scanId)
-				c.RemainingScansMap.Store(scanId, args.ScanDetails)
-			}
-			s := &ScanToExecute{
-				ScanId:      scanId,
-				ScanService: c,
+			if _, ok := c.RemainingScansMap.Load(args.ScanDetails.AccountId); !ok {
+				log.Debug().Msgf("Adding pending scan for scan id as not present earlier: %s", args.ScanDetails.ScanId)
+				c.RemainingScansMap.Store(args.ScanDetails.AccountId, args.ScanDetails)
 			}
 			go func() {
 				jobCount.Add(1)
 				defer jobCount.Add(-1)
-				scanPool.Process(s)
+				c.executeScans(args.ScanDetails)
 			}()
 		case ctl.StopCloudComplianceScan:
 			jsonString, err := json.Marshal(scanDetails.OtherScanDetails)
@@ -810,19 +775,43 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 			}
 		case ctl.RefreshResources:
 			log.Info().Msgf("Received RefreshResources request")
+			jsonString, err := json.Marshal(scanDetails.OtherScanDetails)
+			if err != nil {
+				log.Error().Err(err).Msg("marshal scanDetails.OtherScanDetails failed")
+				continue
+			}
+			var args ctl.RefreshResourcesRequest
+			err = json.Unmarshal(jsonString, &args)
+			if err != nil {
+				log.Error().Err(err).Msg("parsing RefreshResourcesRequest failed")
+				continue
+			}
+			log.Info().Msgf("Refreshing resources for account: %s", args.AccountID)
 			go func() {
-				jobCount.Add(1)
-				defer jobCount.Add(-1)
-				// TODO: refresh for selected accounts
-				c.FetchCloudResources()
+				c.ResourceRefreshLock.Lock()
+				defer c.ResourceRefreshLock.Unlock()
+				c.FetchCloudAccountResources([]util.AccountsToRefresh{
+					{
+						AccountID: args.AccountID,
+						NodeID:    args.NodeId,
+					},
+				}, false)
 			}()
 		case ctl.CloudScannerJobCount:
 			count := int(jobCount.Load())
-			log.Debug().Msgf("Cloud scanner job count: %d", jobCount.Load())
+			log.Debug().Msgf("Cloud scanner job count: %d", count)
 			data := strconv.Itoa(count)
 			_, err = conn.Write([]byte(data))
 			if err != nil {
 				log.Error().Msgf("Error writing job count to unix connection: %+v", err)
+			}
+		case ctl.CloudScannerResourceRefreshCount:
+			count := int(c.ResourceRefreshLock.GetRefreshCount())
+			log.Debug().Msgf("Cloud scanner refresh count: %d", count)
+			data := strconv.Itoa(count)
+			_, err = conn.Write([]byte(data))
+			if err != nil {
+				log.Error().Msgf("Error writing refresh count to unix connection: %+v", err)
 			}
 		default:
 			if _, ok := scanDetails.OtherScanDetails["GetCloudNodeID"]; !ok {

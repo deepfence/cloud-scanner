@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
@@ -18,17 +17,6 @@ import (
 	"github.com/deepfence/golang_deepfence_sdk/client"
 	oahttp "github.com/deepfence/golang_deepfence_sdk/utils/http"
 )
-
-var (
-	HomeDirectory string
-)
-
-func init() {
-	HomeDirectory = os.Getenv("HOME_DIR")
-	if HomeDirectory == "" {
-		HomeDirectory = "/home/deepfence"
-	}
-}
 
 type Client struct {
 	client *oahttp.OpenapiHttpClient
