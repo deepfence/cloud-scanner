@@ -25,6 +25,8 @@ deepfenceKey:
 cloudAccount:
   # AWS/GCP/Azure account ID
   accountID: ""
+  # Account name (Optional, for easy identification. Not required in organization deployment.)
+  accountName: ""
   cloudProvider: ""
   region: ""
   # Is this organization deployment or single account deployment?

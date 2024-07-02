@@ -9,6 +9,7 @@ Metadata:
       - ManagementConsoleURL
       - ManagementConsolePort
       - DeepfenceKey
+      - AccountName
       - CloudScannerImage
       - LogLevel
     - Label:
@@ -43,6 +44,8 @@ Metadata:
         default: Management Console Port
       DeepfenceKey:
         default: Deepfence API Key
+      AccountName:
+        default: AWS Account Name (Optional)
       CloudScannerImage:
         default: Cloud Scanner Image
       Cluster:
@@ -83,6 +86,9 @@ Parameters:
   DeepfenceKey:
     NoEcho: true
     Type: String
+  AccountName:
+    Type: String
+    Description: For easy identification
   CloudScannerImage:
     Default: quay.io/deepfenceio/cloud_scanner_ce:2.3.0
     Type: String
@@ -285,6 +291,8 @@ Resources:
           Value: !Ref ManagementConsolePort
         - Name: DEEPFENCE_KEY
           Value: !Ref DeepfenceKey
+        - Name: CLOUD_ACCOUNT_NAME
+          Value: !Ref AccountName
         - Name: CLOUD_PROVIDER
           Value: aws
         - Name: CLOUD_REGION

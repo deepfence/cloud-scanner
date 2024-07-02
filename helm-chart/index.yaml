@@ -3,12 +3,12 @@ entries:
   deepfence-cloud-scanner:
   - apiVersion: v2
     appVersion: 2.3.0
-    created: "2024-06-18T19:12:20.637723+05:30"
+    created: "2024-07-02T23:20:34.168135+05:30"
     description: Deepfence Cloud Scanner
-    digest: f60582daf0ba69673788177432defc318b61f65bc1c86c334b38db2ba8fb3818
+    digest: 7254d0b58c424fd4ff9d14e5cc801c083c153cf5b25c3831d05ccb1541cae716
     name: deepfence-cloud-scanner
     type: application
     urls:
     - deepfence-cloud-scanner-1.0.0.tgz
     version: 1.0.0
-generated: "2024-06-18T19:12:20.636193+05:30"
+generated: "2024-07-02T23:20:34.167439+05:30"
