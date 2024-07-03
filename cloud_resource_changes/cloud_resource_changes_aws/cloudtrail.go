@@ -2,6 +2,7 @@ package cloud_resource_changes_aws
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/cloud-scanner/util"
 )
@@ -55,7 +56,7 @@ func (c *CloudResourceChangesAWS) Initialize() error {
 		return ErrNoCloudTrailsFound
 	}
 	c.cloudTrailTrails = trails
-	log.Info().Msgf("Following CloudTrail Trails are monitored for events every hour to update the cloud resources in the management console")
+	log.Info().Msgf("Following CloudTrail Trails are monitored for events every 30 minutes to update the cloud resources in the management console")
 	for i, trail := range c.cloudTrailTrails {
 		log.Info().Msgf("%d. %s (Region: %s)", i+1, trail.Arn, trail.Region)
 	}
@@ -87,12 +88,12 @@ func (c *CloudResourceChangesAWS) GetResourceTypesToRefresh() (map[string][]stri
 		}
 	}
 
-	log.Info().Msgf("Resources types to update: %v", cloudResourcesToUpdate)
+	log.Debug().Msgf("Resources types to update: %v", cloudResourcesToUpdate)
 	return cloudResourcesToUpdate, nil
 }
 
-func (c *CloudResourceChangesAWS) getS3Region(s3BucketName, accountId string) string {
-	query := "steampipe query --output json \"select region from aws_" + c.config.AccountID + ".aws_s3_bucket WHERE name LIKE '" + s3BucketName + "' \""
+func (c *CloudResourceChangesAWS) getS3Region(s3BucketName, accountID string) string {
+	query := "steampipe query --output json \"select region from aws_" + accountID + ".aws_s3_bucket WHERE name LIKE '" + s3BucketName + "' \""
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()
 	s3Region := "us-east-1"
@@ -151,19 +152,14 @@ func (c *CloudResourceChangesAWS) getCloudTrailLogEventsFromS3Bucket(isOrganizat
 	today := time.Now()
 	yesterday := time.Now().AddDate(0, 0, -1)
 
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           "profile_" + c.config.AccountID,
-		Config: aws.Config{
-			CredentialsChainVerboseErrors: aws.Bool(true),
-			Region:                        aws.String(s3Region),
-		},
-	})
+	ctx := context.Background()
+	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, s3Region, c.config.RoleName, false)
 	if err != nil {
-		log.Error().Msgf("NewSession Error: %s", err.Error())
+		log.Error().Msgf("GetAWSCredentialsConfig Error: %s", err.Error())
 		return nil
 	}
-	svc := s3.New(sess)
+	s3Client := s3.NewFromConfig(cfg)
+
 	cloudResourcesToRefresh := make(map[string]map[string]bool, 0)
 	var stop bool
 	for _, region := range awsRegions {
@@ -171,14 +167,14 @@ func (c *CloudResourceChangesAWS) getCloudTrailLogEventsFromS3Bucket(isOrganizat
 		if lastModified.Before(today) {
 			yesterdayRegionalFilePrefix := logFilePrefix + region + "/" + fmt.Sprintf("%d/%02d/%02d/",
 				yesterday.Year(), int(yesterday.Month()), yesterday.Day())
-			stop = c.listAndProcessS3Objects(yesterdayRegionalFilePrefix, s3Bucket, err, svc, sess, cloudResourcesToRefresh, region, accId, lastModified)
+			stop = c.listAndProcessS3Objects(ctx, yesterdayRegionalFilePrefix, s3Bucket, s3Client, cloudResourcesToRefresh, region, accId, lastModified)
 			if stop {
 				break
 			}
 		}
 		regionalFilePrefix := logFilePrefix + region + "/"
 		regionalFilePrefix = regionalFilePrefix + fmt.Sprintf("%d/%02d/%02d/", today.Year(), int(today.Month()), today.Day())
-		stop = c.listAndProcessS3Objects(regionalFilePrefix, s3Bucket, err, svc, sess, cloudResourcesToRefresh, region, accId, lastModified)
+		stop = c.listAndProcessS3Objects(ctx, regionalFilePrefix, s3Bucket, s3Client, cloudResourcesToRefresh, region, accId, lastModified)
 		if stop {
 			break
 		}
@@ -186,39 +182,41 @@ func (c *CloudResourceChangesAWS) getCloudTrailLogEventsFromS3Bucket(isOrganizat
 	return cloudResourcesToRefresh
 }
 
-func (c *CloudResourceChangesAWS) listAndProcessS3Objects(regionalFilePrefix string, s3Bucket string, err error, svc *s3.S3, sess *session.Session,
-	cloudResourcesToRefresh map[string]map[string]bool, region string, accId string, lastModified time.Time) bool {
+func (c *CloudResourceChangesAWS) listAndProcessS3Objects(ctx context.Context, regionalFilePrefix string, s3Bucket string,
+	s3Client *s3.Client, cloudResourcesToRefresh map[string]map[string]bool, region string, accId string, lastModified time.Time) bool {
 
 	params := &s3.ListObjectsV2Input{
 		Bucket:       aws.String(s3Bucket),
 		Delimiter:    aws.String("/"),
-		EncodingType: aws.String("url"),
+		EncodingType: s3Types.EncodingTypeUrl,
 		Prefix:       aws.String(regionalFilePrefix),
 	}
 	if accId != c.config.AccountID {
-		params = params.SetExpectedBucketOwner(accId)
+		params.ExpectedBucketOwner = aws.String(accId)
 	}
-	err = svc.ListObjectsV2Pages(params, func(resp *s3.ListObjectsV2Output, lastPage bool) bool {
-		for _, key := range resp.Contents {
+	s3ListPaginator := s3.NewListObjectsV2Paginator(s3Client, params)
+	for s3ListPaginator.HasMorePages() {
+		output, err := s3ListPaginator.NextPage(ctx)
+		if err != nil {
+			log.Error().Err(err).Msgf("error listing objects in s3 bucket %s", s3Bucket)
+			if strings.Contains(err.Error(), "AccessDenied") {
+				return true
+			}
+			return false
+		}
+		for _, key := range output.Contents {
 			if lastModified.After(*key.LastModified) {
 				continue
 			}
 			fileName := strings.Replace(*key.Key, regionalFilePrefix, "", -1)
-			c.processCloudtrailEventLogFile(fileName, key, sess, s3Bucket, accId, cloudResourcesToRefresh)
+			c.processCloudtrailEventLogFile(ctx, fileName, key, s3Client, s3Bucket, accId, cloudResourcesToRefresh)
 			c.updateLastModifiedToMap(region, accId, key)
-		}
-		return lastPage
-	})
-	if err != nil {
-		log.Error().Msgf("Error listing objects for region %s: %s", region, err.Error())
-		if strings.Contains(err.Error(), "AccessDenied") {
-			return true
 		}
 	}
 	return false
 }
 
-func (c *CloudResourceChangesAWS) updateLastModifiedToMap(region string, accId string, key *s3.Object) {
+func (c *CloudResourceChangesAWS) updateLastModifiedToMap(region string, accId string, key s3Types.Object) {
 	regionStartAfterMapLock.Lock()
 	defer regionStartAfterMapLock.Unlock()
 	if _, ok := RegionStartAfterMap[region]; ok {
@@ -246,26 +244,29 @@ func (c *CloudResourceChangesAWS) getLastModifiedFromMap(region string, accId st
 	return time.Now().AddDate(0, 0, -1)
 }
 
-func (c *CloudResourceChangesAWS) processCloudtrailEventLogFile(fileName string, key *s3.Object, sess *session.Session, s3Bucket, accId string, cloudResourcesToRefresh map[string]map[string]bool) {
+func (c *CloudResourceChangesAWS) processCloudtrailEventLogFile(ctx context.Context, fileName string, key s3Types.Object, s3Client *s3.Client, s3Bucket, accId string, cloudResourcesToRefresh map[string]map[string]bool) {
 	file, err := os.Create("/tmp/" + fileName)
 	if err != nil {
 		log.Error().Msgf("Error creating file for S3 download %s: %s", *key.Key, err.Error())
 	}
 	defer os.Remove("/tmp/" + fileName)
-	downloader := s3manager.NewDownloader(sess)
+	downloader := s3manager.NewDownloader(s3Client)
 	s3ObjectInput := s3.GetObjectInput{
 		Bucket: aws.String(s3Bucket),
 		Key:    aws.String(*key.Key),
 	}
 	if accId != c.config.AccountID {
-		s3ObjectInput.SetExpectedBucketOwner(accId)
+		s3ObjectInput.ExpectedBucketOwner = aws.String(accId)
 	}
-	_, err = downloader.Download(file, &s3ObjectInput)
+	_, err = downloader.Download(ctx, file, &s3ObjectInput)
 	if err != nil {
 		log.Error().Msgf("Unable to download item %q, %s", *key.Key, err.Error())
 		return
 	}
 	reader, err := gzip.NewReader(file)
+	if err != nil {
+		log.Error().Msgf("Error converting s3 object to json: %s", err.Error())
+	}
 	defer reader.Close()
 	var cloudTrailEvent CloudTrailLogFile
 	err = json.NewDecoder(reader).Decode(&cloudTrailEvent)

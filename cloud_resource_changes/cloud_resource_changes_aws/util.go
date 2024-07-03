@@ -18,10 +18,14 @@ func GetSupportedAwsRegions() []string {
 
 func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 	var query string
+	var isOrganizationTrail string
+	if config.IsOrganizationDeployment {
+		isOrganizationTrail = "and is_organization_trail = true"
+	}
 	if len(config.CloudAuditLogsIDs) == 0 {
-		query = "steampipe query --output json \"select * from aws_" + config.AccountID + ".aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true\""
+		query = "steampipe query --output json \"select * from aws_" + config.AccountID + ".aws_cloudtrail_trail where is_multi_region_trail = true " + isOrganizationTrail + "\""
 	} else {
-		query = "steampipe query --output json \"select * from aws_all.aws_cloudtrail_trail where is_organization_trail = true and is_multi_region_trail = true and arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
+		query = "steampipe query --output json \"select * from aws_all.aws_cloudtrail_trail where is_multi_region_trail = true " + isOrganizationTrail + " and arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
 	}
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()
@@ -47,6 +51,9 @@ func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 			}
 			selectedTrailList = append(selectedTrailList, trail)
 			selectedARNs[trail.Arn] = true
+		}
+		if len(selectedTrailList) == 0 {
+			log.Error().Msg("cloudtrail trail arn provided does not exist or is not a multi-region trail")
 		}
 		return selectedTrailList
 	}

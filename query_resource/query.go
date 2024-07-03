@@ -12,7 +12,6 @@ import (
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/utils"
-	"github.com/deepfence/cloud-scanner/output"
 	"github.com/deepfence/cloud-scanner/util"
 	_ "github.com/lib/pq"
 )
@@ -75,7 +74,7 @@ func clearPostgresqlCache() error {
 	return nil
 }
 
-func QueryAndRegisterResources(config util.Config, accountsToRefresh []util.AccountsToRefresh, completeRefresh bool) []error {
+func (r *ResourceRefreshService) QueryAndRegisterResources(accountsToRefresh []util.AccountsToRefresh, completeRefresh bool) []error {
 	if completeRefresh {
 		err := clearPostgresqlCache()
 		if err != nil {
@@ -92,29 +91,29 @@ func QueryAndRegisterResources(config util.Config, accountsToRefresh []util.Acco
 	defer cloudResourcesFile.Close()
 
 	for _, account := range accountsToRefresh {
-		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusStarting, "")
+		r.SetResourceRefreshStatus(account, utils.ScanStatusStarting)
 	}
 
 	count := 0
 	var errs = make([]error, 0)
 	for _, account := range accountsToRefresh {
 		log.Debug().Msgf("Started querying resources for %v", account)
-		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusInProgress, "")
+		r.SetResourceRefreshStatus(account, utils.ScanStatusInProgress)
 
-		for _, cloudResourceInfo := range cloudProviderToResourceMap[config.CloudProvider] {
+		for _, cloudResourceInfo := range cloudProviderToResourceMap[r.config.CloudProvider] {
 			// If ResourceTypes is empty, refresh all resource types. Otherwise, only specified ones
 			if len(account.ResourceTypes) > 0 {
 				if !util.InSlice(cloudResourceInfo.Table, account.ResourceTypes) {
 					continue
 				}
-				err = clearPostgresqlCacheRows(config.CloudProvider + "_" + account.AccountID + "." + cloudResourceInfo.Table)
+				err = clearPostgresqlCacheRows(r.config.CloudProvider + "_" + account.AccountID + "." + cloudResourceInfo.Table)
 				if err != nil {
 					errs = append(errs, err)
 					continue
 				}
 			}
 
-			ingestedCount, err := queryResources(account.AccountID, cloudResourceInfo, config, cloudResourcesFile)
+			ingestedCount, err := r.queryResources(account.AccountID, cloudResourceInfo, cloudResourcesFile)
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -124,7 +123,7 @@ func QueryAndRegisterResources(config util.Config, accountsToRefresh []util.Acco
 		}
 
 		log.Debug().Msgf("Querying resources complete for %v", account)
-		output.WriteCloudResourceRefreshStatus(account.NodeID, utils.ScanStatusSuccess, "")
+		r.SetResourceRefreshStatus(account, utils.ScanStatusSuccess)
 	}
 	log.Info().Msgf("Cloud resources ingested: %d", count)
 	return errs
@@ -141,10 +140,10 @@ func clearPostgresqlCacheRows(keyPrefix string) error {
 	return nil
 }
 
-func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, config util.Config, cloudResourcesFile *os.File) (int, error) {
+func (r *ResourceRefreshService) queryResources(accountId string, cloudResourceInfo CloudResourceInfo, cloudResourcesFile *os.File) (int, error) {
 	log.Debug().Msgf("Querying resources for %s", cloudResourceInfo.Table)
 
-	query := "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + config.CloudProvider + "_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
+	query := "steampipe query --output json \"select \\\"" + strings.Join(cloudResourceInfo.Columns[:], "\\\" , \\\"") + "\\\" from " + r.config.CloudProvider + "_" + strings.Replace(accountId, "-", "", -1) + "." + cloudResourceInfo.Table + " \""
 	var stdOut []byte
 	var stdErr error
 	for i := 0; i <= 3; i++ {
@@ -176,8 +175,8 @@ func queryResources(accountId string, cloudResourceInfo CloudResourceInfo, confi
 
 	var private_dns_name string
 	for _, obj := range objMap {
-		obj["account_id"] = util.GetNodeID(config.CloudProvider, accountId)
-		obj["cloud_provider"] = config.CloudProvider
+		obj["account_id"] = util.GetNodeID(r.config.CloudProvider, accountId)
+		obj["cloud_provider"] = r.config.CloudProvider
 		if _, ok := obj["title"]; ok {
 			obj["name"] = fmt.Sprint(obj["title"])
 			delete(obj, "title")

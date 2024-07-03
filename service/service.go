@@ -17,16 +17,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/organizations"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
 	ctl "github.com/deepfence/ThreatMapper/deepfence_utils/controls"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
-	"github.com/deepfence/cloud-scanner/cloud_resource_changes"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
+	"github.com/deepfence/cloud-scanner/query_resource"
 	"github.com/deepfence/cloud-scanner/scanner"
 	"github.com/deepfence/cloud-scanner/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
@@ -53,8 +48,7 @@ type ComplianceScanService struct {
 	SocketPath                 *string
 	organizationAccountIDs     []util.MonitoredAccount
 	organizationAccountIDsLock sync.RWMutex
-	CloudResourceChanges       cloud_resource_changes.CloudResourceChanges
-	ResourceRefreshLock        *ResourceRefreshLock
+	ResourceRefreshService     *query_resource.ResourceRefreshService
 }
 
 func NewComplianceScanService(config util.Config, socketPath *string) (*ComplianceScanService, error) {
@@ -69,7 +63,7 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		log.Error().Msgf("deepfence.NewClient(config) error: %s", err.Error())
 		return nil, err
 	}
-	cloudResourceChanges, err := cloud_resource_changes.NewCloudResourceChanges(config)
+	resourceRefreshService, err := query_resource.NewResourceRefreshService(config)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +78,7 @@ func NewComplianceScanService(config util.Config, socketPath *string) (*Complian
 		CloudTrails:            make([]util.CloudTrailDetails, 0),
 		SocketPath:             socketPath,
 		organizationAccountIDs: []util.MonitoredAccount{},
-		CloudResourceChanges:   cloudResourceChanges,
-		ResourceRefreshLock:    NewResourceRefreshLock(),
+		ResourceRefreshService: resourceRefreshService,
 	}, err
 }
 
@@ -105,36 +98,9 @@ func (c *ComplianceScanService) GetOrganizationAccounts() []util.MonitoredAccoun
 	return c.organizationAccountIDs
 }
 
-func getAWSCredentialsConfig(ctx context.Context, accountID, region, roleName string, verifyCredential bool) (aws.Config, error) {
-	var cfg aws.Config
-	var err error
-	cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		log.Error().Msg(err.Error())
-		return cfg, err
-	}
-
-	roleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
-	cfg.Credentials = aws.NewCredentialsCache(
-		stscreds.NewAssumeRoleProvider(
-			sts.NewFromConfig(cfg), roleARN,
-			func(o *stscreds.AssumeRoleOptions) { o.TokenProvider = stscreds.StdinTokenProvider },
-		),
-	)
-	if verifyCredential {
-		iamClient := iam.NewFromConfig(cfg)
-		_, err = iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: aws.String(roleName)})
-		if err != nil {
-			log.Error().Msg(err.Error())
-			return cfg, err
-		}
-	}
-	return cfg, err
-}
-
 func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.AccountsToRefresh, error) {
 	ctx := context.Background()
-	cfg, err := getAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
+	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +120,7 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.Account
 		}
 		for _, account := range accounts.Accounts {
 			log.Debug().Msgf("Account ID %s - checking if IAM role exists for cloud scanner", *account.Id)
-			_, err = getAWSCredentialsConfig(ctx, *account.Id, c.config.CloudMetadata.Region, c.config.RoleName, true)
+			_, err = util.GetAWSCredentialsConfig(ctx, *account.Id, c.config.CloudMetadata.Region, c.config.RoleName, true)
 			if err != nil {
 				log.Debug().Msgf("Account ID %s is ignored, no IAM role found", *account.Id)
 				continue
@@ -312,7 +278,12 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	if c.config.HttpServerRequired {
 		go c.runHttpServer()
 	}
-	var err error
+
+	unixListener, err := c.createUnixSocket()
+	if err != nil {
+		return err
+	}
+
 	switch c.config.CloudProvider {
 	case util.CloudProviderAWS:
 		if c.config.IsOrganizationDeployment {
@@ -349,17 +320,35 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		processAwsCredentials(c)
 	case util.CloudProviderGCP:
 		if c.config.IsOrganizationDeployment {
-			_, err = c.fetchGCPOrganizationProjects()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-			}
-		} else {
-			projects, err := c.fetchGCPProjects()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-			} else {
-				if len(projects) == 1 {
-					c.config.AccountName = projects[0].AccountName
+			projects, err := c.fetchGCPOrganizationProjects()
+			if err != nil || len(projects) == 0 {
+				if err != nil {
+					log.Error().Msg(err.Error())
+				}
+
+				fetchGCPOrganizationAccounts := func() error {
+					var fetchErr error
+					refreshTicker := time.NewTicker(2 * time.Minute)
+					defer refreshTicker.Stop()
+					stopTicker := time.NewTicker(10 * time.Minute)
+					defer stopTicker.Stop()
+					for {
+						select {
+						case <-refreshTicker.C:
+							projects, fetchErr = c.fetchGCPOrganizationProjects()
+							if fetchErr != nil {
+								log.Error().Msg(fetchErr.Error())
+							} else if len(projects) > 0 {
+								return nil
+							}
+						case <-stopTicker.C:
+							return fetchErr
+						}
+					}
+				}
+				err = fetchGCPOrganizationAccounts()
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -376,13 +365,6 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 
 	log.Info().Msgf("Restarting the steampipe service")
 	util.RestartSteampipeService()
-
-	log.Info().Msgf("CloudResourceChanges Initialization started")
-	err = c.CloudResourceChanges.Initialize()
-	if err != nil {
-		log.Warn().Msgf("%+v", err)
-	}
-	log.Info().Msgf("CloudResourceChanges Initialization completed")
 
 	// Registration should be done first before starting other services
 	err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
@@ -422,10 +404,10 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		go c.refreshOrganizationAccountIDs()
 	}
 
-	//go c.queryAndRegisterCloudResourcesPeriodically()
-	go c.refreshResourcesFromTrailPeriodically()
+	go c.listenForScans(unixListener)
 
-	go c.listenForScans()
+	c.ResourceRefreshService.Initialize()
+
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done
@@ -567,12 +549,6 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 
 				log.Info().Msgf("Restarting the steampipe service")
 				util.RestartSteampipeService()
-
-				go func() {
-					c.ResourceRefreshLock.Lock()
-					defer c.ResourceRefreshLock.Unlock()
-					c.FetchCloudAccountResources(newAccounts, false)
-				}()
 			}
 		}
 	}
@@ -590,54 +566,6 @@ func (c *ComplianceScanService) loopRegister() {
 			}
 		}
 	}
-}
-
-//func (c *ComplianceScanService) queryAndRegisterCloudResourcesPeriodically() {
-//	refreshTicker := time.NewTicker(12 * time.Hour)
-//	for {
-//		go func() {
-//			c.ResourceRefreshLock.Lock()
-//			defer c.ResourceRefreshLock.Unlock()
-//			c.FetchCloudResources()
-//		}()
-//
-//		<-refreshTicker.C
-//	}
-//}
-
-func (c *ComplianceScanService) refreshResourcesFromTrailPeriodically() {
-	refreshTicker := time.NewTicker(1 * time.Hour)
-	for {
-		select {
-		case <-refreshTicker.C:
-			go func() {
-				c.refreshResourcesFromTrail()
-			}()
-		}
-	}
-}
-
-func (c *ComplianceScanService) refreshResourcesFromTrail() {
-	log.Info().Msg("Started updating cloud resources")
-	cloudResourceTypesToRefresh, _ := c.CloudResourceChanges.GetResourceTypesToRefresh()
-	if len(cloudResourceTypesToRefresh) == 0 {
-		return
-	}
-	accountsToRefresh := make([]util.AccountsToRefresh, len(cloudResourceTypesToRefresh))
-	index := 0
-	for accountID, resourceTypes := range cloudResourceTypesToRefresh {
-		accountsToRefresh[index] = util.AccountsToRefresh{
-			AccountID:     accountID,
-			NodeID:        util.GetNodeID(c.config.CloudProvider, accountID),
-			ResourceTypes: resourceTypes,
-		}
-		index += 1
-	}
-
-	c.ResourceRefreshLock.Lock()
-	defer c.ResourceRefreshLock.Unlock()
-	c.FetchCloudAccountResources(accountsToRefresh, false)
-	log.Info().Msg("Updating cloud resources complete")
 }
 
 func (c *ComplianceScanService) executeScans(scan ctl.CloudComplianceScanDetails) interface{} {
@@ -668,7 +596,7 @@ func (c *ComplianceScanService) runHttpServer() {
 	log.Error().Msgf("Error in http.ListenAndServe: %s", err.Error())
 }
 
-func (c *ComplianceScanService) listenForScans() {
+func (c *ComplianceScanService) createUnixSocket() (*net.UnixListener, error) {
 	err := os.Remove(*c.SocketPath)
 	if err != nil {
 		log.Debug().Msgf("Error in os.Remove: %s", err.Error())
@@ -676,9 +604,12 @@ func (c *ComplianceScanService) listenForScans() {
 	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: *c.SocketPath, Net: "unix"})
 	if err != nil {
 		log.Error().Msgf("Error listening for scans: %s", err.Error())
-		return
+		return nil, err
 	}
+	return l, nil
+}
 
+func (c *ComplianceScanService) listenForScans(l *net.UnixListener) {
 	go func() {
 		defer l.Close()
 
@@ -704,9 +635,9 @@ type ScanDetails struct {
 }
 
 func (c *ComplianceScanService) handleRequest(conn net.Conn) {
-	log.Debug().Msg("New client connected.")
+	log.Trace().Msg("New client connected.")
 	defer func() {
-		log.Debug().Msgf("Connection closed")
+		log.Trace().Msgf("Connection closed")
 		conn.Close()
 	}()
 
@@ -788,9 +719,7 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 			}
 			log.Info().Msgf("Refreshing resources for account: %s", args.AccountID)
 			go func() {
-				c.ResourceRefreshLock.Lock()
-				defer c.ResourceRefreshLock.Unlock()
-				c.FetchCloudAccountResources([]util.AccountsToRefresh{
+				c.ResourceRefreshService.FetchCloudAccountResources([]util.AccountsToRefresh{
 					{
 						AccountID: args.AccountID,
 						NodeID:    args.NodeId,
@@ -806,7 +735,7 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 				log.Error().Msgf("Error writing job count to unix connection: %+v", err)
 			}
 		case ctl.CloudScannerResourceRefreshCount:
-			count := int(c.ResourceRefreshLock.GetRefreshCount())
+			count := int(c.ResourceRefreshService.GetRefreshCount())
 			log.Debug().Msgf("Cloud scanner refresh count: %d", count)
 			data := strconv.Itoa(count)
 			_, err = conn.Write([]byte(data))
