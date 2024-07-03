@@ -349,17 +349,35 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		processAwsCredentials(c)
 	case util.CloudProviderGCP:
 		if c.config.IsOrganizationDeployment {
-			_, err = c.fetchGCPOrganizationProjects()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-			}
-		} else {
-			projects, err := c.fetchGCPProjects()
-			if err != nil {
-				log.Warn().Msg(err.Error())
-			} else {
-				if len(projects) == 1 {
-					c.config.AccountName = projects[0].AccountName
+			projects, err := c.fetchGCPOrganizationProjects()
+			if err != nil || len(projects) == 0 {
+				if err != nil {
+					log.Error().Msg(err.Error())
+				}
+
+				fetchGCPOrganizationAccounts := func() error {
+					var fetchErr error
+					refreshTicker := time.NewTicker(2 * time.Minute)
+					defer refreshTicker.Stop()
+					stopTicker := time.NewTicker(10 * time.Minute)
+					defer stopTicker.Stop()
+					for {
+						select {
+						case <-refreshTicker.C:
+							projects, fetchErr = c.fetchGCPOrganizationProjects()
+							if fetchErr != nil {
+								log.Error().Msg(fetchErr.Error())
+							} else if len(projects) > 0 {
+								return nil
+							}
+						case <-stopTicker.C:
+							return fetchErr
+						}
+					}
+				}
+				err = fetchGCPOrganizationAccounts()
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -567,12 +585,6 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 
 				log.Info().Msgf("Restarting the steampipe service")
 				util.RestartSteampipeService()
-
-				go func() {
-					c.ResourceRefreshLock.Lock()
-					defer c.ResourceRefreshLock.Unlock()
-					c.FetchCloudAccountResources(newAccounts, false)
-				}()
 			}
 		}
 	}
