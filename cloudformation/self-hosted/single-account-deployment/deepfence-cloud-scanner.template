@@ -38,8 +38,7 @@ Metadata:
       - CloudTrailTrails
     ParameterLabels:
       ManagementConsoleURL:
-        default: 'Management Console URL. Example: 22.33.44.55 or
-          deepfence.customer.com'
+        default: 'Management Console URL. Example: 22.33.44.55 or deepfence.customer.com'
       ManagementConsolePort:
         default: Management Console Port
       DeepfenceKey:
@@ -65,9 +64,7 @@ Metadata:
       SubnetCIDR:
         default: Cloud Scanner Subnet CIDR Block
       TaskIAMRole:
-        default: If SecurityAudit role is chosen, cloud scanner may not find
-          configuration issues in some of the AWS resources like WAF. Also
-          updates will happen only once every day.
+        default: If SecurityAudit role is chosen, cloud scanner may not find configuration issues in some of the AWS resources like WAF. Also updates will happen only once every day.
       TaskCPU:
         default: 'Task CPU Units (Default: 4 vCPU)'
       TaskMemory:
@@ -75,8 +72,7 @@ Metadata:
       TaskEphemeralStorage:
         default: 'Task Ephemeral Storage (Default: 100 GB)'
       CloudTrailTrails:
-        default: Cloud Trail ARNs (comma separated) to refresh every hour on changes in
-          the infrastructure
+        default: Cloud Trail ARNs (comma separated) to refresh every hour on changes in the infrastructure
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -149,9 +145,7 @@ Parameters:
     Default: '100'
   CloudTrailTrails:
     Type: String
-    Description: CloudTrail Trail ARNs (Management events with write-only or
-      read-write). If empty, a trail with management events will be
-      automatically chosen if available.
+    Description: CloudTrail Trail ARNs (Management events with write-only or read-write). If empty, a trail with management events will be automatically chosen if available.
 Conditions:
   CreateNewVPC: !Equals
   - !Ref VPC
@@ -348,7 +342,7 @@ Resources:
       - ''
       - - !Ref AWS::StackName
         - '-execution-role'
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
@@ -365,7 +359,7 @@ Resources:
       RoleName: !Join
       - ''
       - - !Ref AWS::StackName
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole

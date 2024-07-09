@@ -1,12 +1,18 @@
 package util
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
 	"os/exec"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	cloud_metadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 )
@@ -106,4 +112,45 @@ func RestartSteampipeService() {
 	}
 	log.Info().Msgf("Steampipe service restarted")
 	time.Sleep(5 * time.Second)
+}
+
+func GetAWSCredentialsConfig(ctx context.Context, accountID, region, roleName string, verifyCredential bool) (aws.Config, error) {
+	var cfg aws.Config
+	var err error
+
+	if roleName == "" {
+		cfg, err = config.LoadDefaultConfig(
+			ctx,
+			config.WithRegion(region),
+			config.WithSharedConfigProfile("profile_"+accountID),
+		)
+		if err != nil {
+			log.Error().Msg(err.Error())
+			return cfg, err
+		}
+		return cfg, nil
+	}
+
+	cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		log.Error().Msg(err.Error())
+		return cfg, err
+	}
+
+	roleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
+	cfg.Credentials = aws.NewCredentialsCache(
+		stscreds.NewAssumeRoleProvider(
+			sts.NewFromConfig(cfg), roleARN,
+			func(o *stscreds.AssumeRoleOptions) { o.TokenProvider = stscreds.StdinTokenProvider },
+		),
+	)
+	if verifyCredential {
+		iamClient := iam.NewFromConfig(cfg)
+		_, err = iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: aws.String(roleName)})
+		if err != nil {
+			log.Error().Msg(err.Error())
+			return cfg, err
+		}
+	}
+	return cfg, err
 }

@@ -362,7 +362,7 @@ Resources:
       - - !Ref ParentStackName
         - Role
       AssumeRolePolicyDocument: >-
-        {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -381,7 +381,7 @@ Resources:
       - - !Ref ParentStackName
         - OrgRole
       AssumeRolePolicyDocument: >-
-        {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}
+        {"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole

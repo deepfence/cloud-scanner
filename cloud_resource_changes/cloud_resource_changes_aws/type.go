@@ -1,30 +1,19 @@
 package cloud_resource_changes_aws
 
-import (
-	"github.com/aws/aws-sdk-go/service/macie2"
-)
-
 type WebIdentitySessionContext struct {
 	FederatedProvider string                 `json:"federatedProvider,omitempty"`
 	Attributes        map[string]interface{} `json:"attributes,omitempty"`
 }
 
-type SessionContext struct {
-	Attributes          map[string]interface{}    `json:"attributes,omitempty"`
-	SessionIssuer       macie2.SessionIssuer      `json:"sessionIssuer,omitempty"`
-	WebIdFederationData WebIdentitySessionContext `json:"webIdFederationData,omitempty"`
-}
-
 type UserIdentity struct {
-	IdentityType     string         `json:"type,omitempty"`
-	PrincipalId      string         `json:"principalId,omitempty"`
-	Arn              string         `json:"arn,omitempty"`
-	AccountId        string         `json:"accountId,omitempty"`
-	AccessKeyId      string         `json:"accessKeyId,omitempty"`
-	UserName         string         `json:"userName,omitempty"`
-	InvokedBy        string         `json:"invokedBy,omitempty"`
-	SessionContext   SessionContext `json:"sessionContext,omitempty"`
-	IdentityProvider string         `json:"identityProvider,omitempty"`
+	IdentityType     string `json:"type,omitempty"`
+	PrincipalId      string `json:"principalId,omitempty"`
+	Arn              string `json:"arn,omitempty"`
+	AccountId        string `json:"accountId,omitempty"`
+	AccessKeyId      string `json:"accessKeyId,omitempty"`
+	UserName         string `json:"userName,omitempty"`
+	InvokedBy        string `json:"invokedBy,omitempty"`
+	IdentityProvider string `json:"identityProvider,omitempty"`
 }
 
 type CloudTrailLogEventResources struct {

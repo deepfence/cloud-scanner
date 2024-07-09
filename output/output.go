@@ -29,10 +29,10 @@ func WriteScanStatus(status, scanID, scanMessage string) {
 		return
 	}
 
-	log.Debug().Msgf("Writing status: %s", status)
+	log.Debug().Msgf("Writing scan status: %s", status)
 	err = writeToFile(byteJSON, scanStatusFilename)
 	if err != nil {
-		log.Error().Msgf("Error writing status data to %s, Error: %s", scanStatusFilename, err)
+		log.Error().Msgf("Error writing scan status data to %s, Error: %s", scanStatusFilename, err)
 		return
 	}
 }
@@ -50,10 +50,10 @@ func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage strin
 		return
 	}
 
-	log.Debug().Msgf("Writing status: %s, %s", refreshStatus, refreshMessage)
+	log.Debug().Msgf("Writing refresh status: %s, %s", refreshStatus, refreshMessage)
 	err = writeToFile(byteJSON, cloudResourceRefreshStatusFilename)
 	if err != nil {
-		log.Error().Msgf("Error writing status data to %s, Error: %s", cloudResourceRefreshStatusFilename, err)
+		log.Error().Msgf("Error writing refresh status data to %s, Error: %s", cloudResourceRefreshStatusFilename, err)
 		return
 	}
 }
