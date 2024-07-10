@@ -26,10 +26,6 @@ var (
 	SleepTime = 5 * time.Second
 )
 
-func GetIntTimestamp() int64 {
-	return time.Now().UTC().UnixNano() / 1000000
-}
-
 func GetDatetimeNow() string {
 	return time.Now().UTC().Format("2006-01-02T15:04:05Z")
 }
@@ -114,39 +110,49 @@ func RestartSteampipeService() {
 	time.Sleep(5 * time.Second)
 }
 
-func GetAWSCredentialsConfig(ctx context.Context, accountID, region, roleName string, verifyCredential bool) (aws.Config, error) {
+func GetAWSCredentialsConfig(ctx context.Context, accountID string, region string, c Config, verifyCredential bool) (aws.Config, error) {
 	var cfg aws.Config
 	var err error
 
-	if roleName == "" {
+	if accountID == c.DeployedAccountID {
 		cfg, err = config.LoadDefaultConfig(
 			ctx,
 			config.WithRegion(region),
-			config.WithSharedConfigProfile("profile_"+accountID),
 		)
 		if err != nil {
 			log.Error().Msg(err.Error())
 			return cfg, err
 		}
-		return cfg, nil
+	} else {
+		if c.RoleName == "" {
+			cfg, err = config.LoadDefaultConfig(
+				ctx,
+				config.WithRegion(region),
+				config.WithSharedConfigProfile("profile_"+accountID),
+			)
+			if err != nil {
+				log.Error().Msg(err.Error())
+				return cfg, err
+			}
+		} else {
+			cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
+			if err != nil {
+				log.Error().Msg(err.Error())
+				return cfg, err
+			}
+
+			cfg.Credentials = aws.NewCredentialsCache(
+				stscreds.NewAssumeRoleProvider(
+					sts.NewFromConfig(cfg), fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, c.RoleName),
+					func(o *stscreds.AssumeRoleOptions) { o.TokenProvider = stscreds.StdinTokenProvider },
+				),
+			)
+		}
 	}
 
-	cfg, err = config.LoadDefaultConfig(ctx, config.WithRegion(region))
-	if err != nil {
-		log.Error().Msg(err.Error())
-		return cfg, err
-	}
-
-	roleARN := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
-	cfg.Credentials = aws.NewCredentialsCache(
-		stscreds.NewAssumeRoleProvider(
-			sts.NewFromConfig(cfg), roleARN,
-			func(o *stscreds.AssumeRoleOptions) { o.TokenProvider = stscreds.StdinTokenProvider },
-		),
-	)
 	if verifyCredential {
 		iamClient := iam.NewFromConfig(cfg)
-		_, err = iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: aws.String(roleName)})
+		_, err = iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: aws.String(c.RoleName)})
 		if err != nil {
 			log.Error().Msg(err.Error())
 			return cfg, err
