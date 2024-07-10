@@ -293,6 +293,8 @@ Resources:
           Value: !Ref AWS::Region
         - Name: CLOUD_ACCOUNT_ID
           Value: !Ref AWS::AccountId
+        - Name: DEPLOYED_ACCOUNT_ID
+          Value: !Ref AWS::AccountId
         - Name: ORGANIZATION_DEPLOYMENT
           Value: 'false'
         - Name: ROLE_NAME
@@ -342,7 +344,12 @@ Resources:
       - ''
       - - !Ref AWS::StackName
         - '-execution-role'
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}'
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action: 'sts:AssumeRole'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
@@ -359,7 +366,7 @@ Resources:
       RoleName: !Join
       - ''
       - - !Ref AWS::StackName
-      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com","AWS":"*"},"Action":"sts:AssumeRole"}]}'
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Sid":"","Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole

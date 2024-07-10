@@ -23,7 +23,7 @@ deepfenceKey:
   key: ""
 
 cloudAccount:
-  # AWS/GCP/Azure account ID
+  # AWS/GCP/Azure account ID to monitor
   accountID: ""
   # Account name (Optional, for easy identification. Not required in organization deployment.)
   accountName: ""
@@ -32,6 +32,8 @@ cloudAccount:
   # Is this organization deployment or single account deployment?
   isOrganizationDeployment: false
   organizationAccountID: ""
+  # Optional: AWS/GCP/Azure account ID where the helm chart is deployed, in case it is different from monitored account ID
+  deployedAccountID: ""
   # Role name. The name should be same across all accounts in the Organization deployment.
   # Role ARN example: arn:aws:iam::123456789012:role/deepfence-managed-cloud-scanner-role
   # Role name in this case is deepfence-managed-cloud-scanner-role

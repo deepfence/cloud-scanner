@@ -100,7 +100,7 @@ func (c *ComplianceScanService) GetOrganizationAccounts() []util.MonitoredAccoun
 
 func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.AccountsToRefresh, error) {
 	ctx := context.Background()
-	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config.RoleName, false)
+	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config, false)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.Account
 		}
 		for _, account := range accounts.Accounts {
 			log.Debug().Msgf("Account ID %s - checking if IAM role exists for cloud scanner", *account.Id)
-			_, err = util.GetAWSCredentialsConfig(ctx, *account.Id, c.config.CloudMetadata.Region, c.config.RoleName, true)
+			_, err = util.GetAWSCredentialsConfig(ctx, *account.Id, c.config.CloudMetadata.Region, c.config, true)
 			if err != nil {
 				log.Debug().Msgf("Account ID %s is ignored, no IAM role found", *account.Id)
 				continue
@@ -460,8 +460,12 @@ func processAwsCredentials(c *ComplianceScanService) {
 		if c.config.RoleName == "" {
 			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 		} else {
-			awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
-			steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+			if accId == c.config.DeployedAccountID {
+				steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+			} else {
+				awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
+				steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
+			}
 		}
 	}
 

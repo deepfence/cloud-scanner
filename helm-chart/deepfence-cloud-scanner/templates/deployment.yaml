@@ -50,6 +50,8 @@ spec:
             value: "{{ .Values.cloudAccount.region }}"
           - name: CLOUD_ACCOUNT_ID
             value: "{{ .Values.cloudAccount.accountID }}"
+          - name: DEPLOYED_ACCOUNT_ID
+            value: "{{ .Values.cloudAccount.deployedAccountID }}"
           - name: CLOUD_ACCOUNT_NAME
             value: "{{ .Values.cloudAccount.accountName }}"
           - name: CLOUD_ORGANIZATION_ID
@@ -57,7 +59,7 @@ spec:
           - name: ORGANIZATION_DEPLOYMENT
             value: "{{ .Values.cloudAccount.isOrganizationDeployment }}"
           - name: ROLE_NAME
-            value: "{{ required "cloudAccount.roleName is required" .Values.cloudAccount.roleName }}"
+            value: "{{ .Values.cloudAccount.roleName }}"
           - name: AWS_CREDENTIAL_SOURCE
             value: "Ec2InstanceMetadata"
           - name: CLOUD_AUDIT_LOG_IDS

@@ -153,7 +153,7 @@ func (c *CloudResourceChangesAWS) getCloudTrailLogEventsFromS3Bucket(isOrganizat
 	yesterday := time.Now().AddDate(0, 0, -1)
 
 	ctx := context.Background()
-	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, s3Region, c.config.RoleName, false)
+	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, s3Region, c.config, false)
 	if err != nil {
 		log.Error().Msgf("GetAWSCredentialsConfig Error: %s", err.Error())
 		return nil
