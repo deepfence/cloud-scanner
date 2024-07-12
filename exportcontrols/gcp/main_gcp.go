@@ -13,7 +13,10 @@ import (
 )
 
 var BenchmarksMap = map[string]string{
-	"cis": "cis_v200",
+	"cis":   "cis_v300",
+	"hipaa": "hipaa",
+	"nist":  "nist_800_53_rev_5",
+	"pci":   "pci_dss_v321",
 }
 
 var bLock sync.Mutex
@@ -161,8 +164,19 @@ func (c *Control) SetCategoryHierarchyShort() {
 	bmType := c.CategoryHierarchy[0]
 
 	switch {
-	case strings.Contains(bmType, "CIS v2.0.0"):
-		c.CategoryHierarchyShort = fmt.Sprintf("CIS v2.0.0 - %s", c.Tags["cis_item_id"])
+	case strings.Contains(bmType, "CIS v3.0.0"):
+		c.CategoryHierarchyShort = fmt.Sprintf("CIS v3.0.0 - %s", c.Tags["cis_item_id"])
+
+	case strings.Contains(bmType, "NIST 800-53 Revision 5"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("NIST 800-53 Revision 5 - %s", controlNum[len(controlNum)-1])
+
+	case strings.Contains(bmType, "PCI DSS v3.2.1"):
+		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
+		c.CategoryHierarchyShort = fmt.Sprintf("PCI DSS v3.2.1 - %s", controlNum[len(controlNum)-1])
+
+	case strings.Contains(bmType, "HIPAA"):
+		c.CategoryHierarchyShort = fmt.Sprintf("HIPPA - %s", c.CategoryHierarchy[1])
 
 	default:
 		c.CategoryHierarchyShort = ""

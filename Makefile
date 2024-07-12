@@ -13,5 +13,5 @@ steampipe-docker:
 	docker build -t $(IMAGE_REPOSITORY)/steampipe:$(DF_IMG_TAG) -f Dockerfile.steampipe $(PWD)
 
 steampipe-docker-push:
-	docker tag $(IMAGE_REPOSITORY)/steampipe:$(DF_IMG_TAG) $(IMAGE_REPOSITORY)/steampipe:0.20.x
-	docker push $(IMAGE_REPOSITORY)/steampipe:0.20.x
+	docker tag $(IMAGE_REPOSITORY)/steampipe:$(DF_IMG_TAG) $(IMAGE_REPOSITORY)/steampipe:0.23.x
+	docker push $(IMAGE_REPOSITORY)/steampipe:0.23.x

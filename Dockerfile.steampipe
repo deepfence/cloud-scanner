@@ -5,7 +5,7 @@ WORKDIR /app/code
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates
 
-RUN git clone https://github.com/deepfence/steampipe --branch v0.20.x --depth 1 \
+RUN git clone https://github.com/deepfence/steampipe --branch v0.23.x --depth 1 \
     && cd steampipe  \
     && go build -o steampipe
 
@@ -17,7 +17,7 @@ WORKDIR /app/code
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates
 
-RUN git clone https://github.com/deepfence/steampipe-plugin-aws --branch v0.118.1 --depth 1 \
+RUN git clone https://github.com/deepfence/steampipe-plugin-aws --branch v0.144.0 --depth 1 \
     && cd steampipe-plugin-aws \
     && go build -o steampipe-plugin-aws.plugin *.go
 
@@ -29,7 +29,7 @@ WORKDIR /app/code
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates
 
-RUN git clone https://github.com/deepfence/steampipe-plugin-gcp --branch v0.43.0 --depth 1 \
+RUN git clone https://github.com/deepfence/steampipe-plugin-gcp --branch v0.54.1 --depth 1 \
     && cd steampipe-plugin-gcp  \
     && go build -o steampipe-plugin-gcp.plugin *.go
 
@@ -41,7 +41,7 @@ WORKDIR /app/code
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates
 
-RUN git clone https://github.com/deepfence/steampipe-plugin-azure --branch v0.49.0 --depth 1 \
+RUN git clone https://github.com/deepfence/steampipe-plugin-azure --branch v0.61.0 --depth 1 \
     && cd steampipe-plugin-azure  \
     && go build -o steampipe-plugin-azure.plugin *.go
 
@@ -53,7 +53,7 @@ WORKDIR /app/code
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git ca-certificates
 
-RUN git clone https://github.com/deepfence/steampipe-plugin-azuread --branch v0.12.0 --depth 1 \
+RUN git clone https://github.com/deepfence/steampipe-plugin-azuread --branch v0.16.0 --depth 1 \
     && cd steampipe-plugin-azuread  \
     && go build -o steampipe-plugin-azuread.plugin *.go
 

@@ -166,15 +166,15 @@ func (r *ResourceRefreshService) queryResources(accountId string, cloudResourceI
 	}
 
 	log.Trace().Msgf("Got stdout for %s: %s", cloudResourceInfo.Table, string(stdOut))
-	var objMap []map[string]interface{}
-	if err := json.Unmarshal(stdOut, &objMap); err != nil {
+	var steampipeQueryResponse SteampipeQueryResponse
+	if err := json.Unmarshal(stdOut, &steampipeQueryResponse); err != nil {
 		log.Error().Msgf("Error: %v \n Steampipe Output: %s", err, string(stdOut))
 		return 0, errors.New(string(stdOut))
 	}
-	log.Debug().Msgf("Got length of %d for %s", len(objMap), cloudResourceInfo.Table)
+	log.Debug().Msgf("Got length of %d for %s", len(steampipeQueryResponse.Rows), cloudResourceInfo.Table)
 
 	var private_dns_name string
-	for _, obj := range objMap {
+	for _, obj := range steampipeQueryResponse.Rows {
 		obj["account_id"] = util.GetNodeID(r.config.CloudProvider, accountId)
 		obj["cloud_provider"] = r.config.CloudProvider
 		if _, ok := obj["title"]; ok {
@@ -218,5 +218,9 @@ func (r *ResourceRefreshService) queryResources(accountId string, cloudResourceI
 		}
 	}
 
-	return len(objMap), nil
+	return len(steampipeQueryResponse.Rows), nil
+}
+
+type SteampipeQueryResponse struct {
+	Rows []map[string]interface{} `json:"rows"`
 }

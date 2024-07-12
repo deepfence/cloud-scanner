@@ -13,7 +13,7 @@ import (
 )
 
 var BenchmarksMap = map[string]string{
-	"cis":                       "cis_v200",
+	"cis":                       "cis_v300",
 	"nist":                      "nist_800_171_rev_2",
 	"pci":                       "pci_dss_v321",
 	"gdpr":                      "gdpr",
@@ -179,8 +179,8 @@ func (c *Control) SetCategoryHierarchyShort() {
 	bmType := c.CategoryHierarchy[0]
 
 	switch {
-	case strings.Contains(bmType, "CIS v2.0.0"):
-		c.CategoryHierarchyShort = fmt.Sprintf("CIS v2.0.0 - %s", c.Tags["cis_item_id"])
+	case strings.Contains(bmType, "CIS v3.0.0"):
+		c.CategoryHierarchyShort = fmt.Sprintf("CIS v3.0.0 - %s", c.Tags["cis_item_id"])
 
 	case strings.Contains(bmType, "NIST 800-171 Revision 2"):
 		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")

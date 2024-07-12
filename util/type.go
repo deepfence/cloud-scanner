@@ -23,7 +23,7 @@ const (
 //var (
 //	ComplianceBenchmarks = map[string]map[string]string{
 //		CloudProviderAWS: {
-//			"cis":   "benchmark.cis_v200",
+//			"cis":   "benchmark.cis_v300",
 //			"gdpr":  "benchmark.gdpr",
 //			"hipaa": "benchmark.hipaa_final_omnibus_security_rule_2013",
 //			"pci":   "benchmark.pci_dss_v321",
@@ -31,12 +31,15 @@ const (
 //			"nist":  "benchmark.nist_800_171_rev_2",
 //		},
 //		CloudProviderGCP: {
-//			"cis": "benchmark.cis_v200",
+//			"cis":   "benchmark.cis_v300",
+//			"hipaa": "benchmark.hipaa",
+//			"nist":  "benchmark.nist_800_53_rev_5",
+//			"pci":   "benchmark.pci_dss_v321",
 //		},
 //		CloudProviderAzure: {
-//			"cis":   "benchmark.cis_v200",
+//			"cis":   "benchmark.cis_v210",
 //			"hipaa": "benchmark.hipaa_hitrust_v92",
-//			"nist":  "benchmark.nist_sp_800_53_rev_5",
+//			"nist":  "benchmark.nist_sp_800_171_rev_2",
 //			"pci":   "benchmark.pci_dss_v321",
 //		},
 //	}
