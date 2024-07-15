@@ -3,15 +3,15 @@ package query_resource
 var (
 	awsCloudTablesJson = `[
   {
-    "table": "aws_iam_account_summary",
+    "table": "aws_accessanalyzer_analyzer",
     "columns": [
-      "account_access_keys_present",
       "account_id",
-      "account_mfa_enabled",
-      "partition",
-      "region"
+      "arn",
+      "name",
+      "region",
+      "title"
     ],
-    "id_column": ""
+    "id_column": "arn"
   },
   {
     "table": "aws_account",
@@ -26,19 +26,863 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_iam_virtual_mfa_device",
+    "table": "aws_account_alternate_contact",
     "columns": [
-      "serial_number",
+      "account_id",
+      "arn",
+      "contact_type",
+      "name",
       "region",
       "title"
     ],
     "id_column": "title"
   },
   {
+    "table": "aws_acm_certificate",
+    "columns": [
+      "account_id",
+      "arn",
+      "certificate_arn",
+      "key_algorithm",
+      "not_after",
+      "region",
+      "renewal_eligibility",
+      "title"
+    ],
+    "id_column": "certificate_arn"
+  },
+  {
+    "table": "aws_acmpca_certificate_authority",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "status",
+      "title",
+      "type"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_api_gateway_stage",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "arn",
+      "client_certificate_id",
+      "method_settings",
+      "name",
+      "partition",
+      "region",
+      "rest_api_id",
+      "tags",
+      "title",
+      "tracing_enabled",
+      "web_acl_arn"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_api_gatewayv2_route",
+    "columns": [
+      "account_id",
+      "api_id",
+      "arn",
+      "authorization_type",
+      "partition",
+      "region",
+      "route_id",
+      "title"
+    ],
+    "id_column": "api_id"
+  },
+  {
+    "table": "aws_api_gatewayv2_stage",
+    "columns": [
+      "_ctx",
+      "access_log_settings",
+      "account_id",
+      "api_id",
+      "arn",
+      "default_route_logging_level",
+      "partition",
+      "region",
+      "stage_name",
+      "tags",
+      "title"
+    ],
+    "id_column": "api_id"
+  },
+  {
+    "table": "aws_appautoscaling_target",
+    "columns": [
+      "arn",
+      "region",
+      "resource_id",
+      "service_namespace",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_appsync_graphql_api",
+    "columns": [
+      "account_id",
+      "arn",
+      "log_config",
+      "name",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_athena_workgroup",
+    "columns": [
+      "account_id",
+      "arn",
+      "encryption_option",
+      "name",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_backup_plan",
+    "columns": [
+      "account_id",
+      "arn",
+      "backup_plan",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_backup_protected_resource",
+    "columns": [
+      "arn",
+      "region",
+      "resource_arn",
+      "resource_type",
+      "title"
+    ],
+    "id_column": "resource_arn"
+  },
+  {
+    "table": "aws_backup_recovery_point",
+    "columns": [
+      "account_id",
+      "arn",
+      "is_encrypted",
+      "lifecycle",
+      "recovery_point_arn",
+      "region",
+      "title"
+    ],
+    "id_column": "recovery_point_arn"
+  },
+  {
+    "table": "aws_backup_selection",
+    "columns": [
+      "arn",
+      "backup_plan_id",
+      "list_of_tags",
+      "region",
+      "resources",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_backup_vault",
+    "columns": [
+      "account_id",
+      "arn",
+      "policy",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_cloudformation_stack",
+    "columns": [
+      "account_id",
+      "arn",
+      "id",
+      "notification_arns",
+      "region",
+      "stack_drift_status",
+      "title"
+    ],
+    "id_column": "notification_arns"
+  },
+  {
+    "table": "aws_cloudfront_distribution",
+    "columns": [
+      "account_id",
+      "arn",
+      "default_cache_behavior",
+      "default_root_object",
+      "logging",
+      "origin_groups",
+      "origins",
+      "region",
+      "title",
+      "viewer_certificate",
+      "web_acl_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_cloudtrail_trail",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "advanced_event_selectors",
+      "arn",
+      "event_selectors",
+      "home_region",
+      "include_global_service_events",
+      "is_logging",
+      "is_multi_region_trail",
+      "is_organization_trail",
+      "kms_key_id",
+      "latest_delivery_time",
+      "log_file_validation_enabled",
+      "log_group_arn",
+      "name",
+      "region",
+      "s3_bucket_name",
+      "tags",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_cloudwatch_alarm",
+    "columns": [
+      "account_id",
+      "actions_enabled",
+      "alarm_actions",
+      "arn",
+      "insufficient_data_actions",
+      "ok_actions",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_cloudwatch_log_group",
+    "columns": [
+      "account_id",
+      "arn",
+      "kms_key_id",
+      "region",
+      "retention_in_days",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_codebuild_project",
+    "columns": [
+      "account_id",
+      "arn",
+      "environment",
+      "logs_config",
+      "region",
+      "source",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_codedeploy_deployment_group",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "application_name",
+      "arn",
+      "deployment_config_name",
+      "region",
+      "tags",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_config_configuration_recorder",
+    "columns": [
+      "account_id",
+      "arn",
+      "recording_group",
+      "region",
+      "status",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_dax_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "sse_description",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_dms_endpoint",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "ssl_mode",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_dms_replication_instance",
+    "columns": [
+      "account_id",
+      "arn",
+      "auto_minor_version_upgrade",
+      "publicly_accessible",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_dms_replication_task",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "replication_task_settings",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_docdb_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "backup_retention_period",
+      "deletion_protection",
+      "region",
+      "storage_encrypted",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_docdb_cluster_instance",
+    "columns": [
+      "account_id",
+      "arn",
+      "db_instance_arn",
+      "enabled_cloudwatch_logs_exports",
+      "engine",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_docdb_cluster_snapshot",
+    "columns": [
+      "account_id",
+      "arn",
+      "db_cluster_snapshot_attributes",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_dynamodb_table",
+    "columns": [
+      "account_id",
+      "arn",
+      "billing_mode",
+      "deletion_protection_enabled",
+      "name",
+      "point_in_time_recovery_description",
+      "region",
+      "sse_description",
+      "tags",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ebs_snapshot",
+    "columns": [
+      "account_id",
+      "arn",
+      "create_volume_permissions",
+      "partition",
+      "region",
+      "snapshot_id",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ebs_volume",
+    "columns": [
+      "account_id",
+      "arn",
+      "encrypted",
+      "region",
+      "state",
+      "tags",
+      "title",
+      "volume_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_application_load_balancer",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "arn",
+      "availability_zones",
+      "load_balancer_attributes",
+      "region",
+      "scheme",
+      "security_groups",
+      "tags",
+      "title",
+      "vpc_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_autoscaling_group",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "arn",
+      "autoscaling_group_arn",
+      "availability_zones",
+      "health_check_type",
+      "launch_template_id",
+      "load_balancer_names",
+      "mixed_instances_policy_launch_template_overrides",
+      "region",
+      "tags",
+      "target_group_arns",
+      "title"
+    ],
+    "id_column": "autoscaling_group_arn"
+  },
+  {
+    "table": "aws_ec2_classic_load_balancer",
+    "columns": [
+      "access_log_enabled",
+      "account_id",
+      "additional_attributes",
+      "arn",
+      "availability_zones",
+      "connection_draining_enabled",
+      "cross_zone_load_balancing_enabled",
+      "instances",
+      "listener_descriptions",
+      "name",
+      "partition",
+      "region",
+      "scheme",
+      "security_groups",
+      "source_security_group_name",
+      "tags",
+      "title",
+      "vpc_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_client_vpn_endpoint",
+    "columns": [
+      "account_id",
+      "arn",
+      "client_vpn_endpoint_id",
+      "connection_log_options",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_gateway_load_balancer",
+    "columns": [
+      "account_id",
+      "arn",
+      "availability_zones",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_instance",
+    "columns": [
+      "account_id",
+      "arn",
+      "ebs_optimized",
+      "iam_instance_profile_id",
+      "instance_id",
+      "instance_state",
+      "instance_type",
+      "launch_template_data",
+      "metadata_options",
+      "monitoring_state",
+      "network_interfaces",
+      "private_dns_name",
+      "private_ip_address",
+      "public_ip_address",
+      "region",
+      "security_groups",
+      "state_transition_time",
+      "tags",
+      "title",
+      "virtualization_type",
+      "vpc_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_launch_configuration",
+    "columns": [
+      "account_id",
+      "arn",
+      "associate_public_ip_address",
+      "launch_configuration_arn",
+      "metadata_options_http_tokens",
+      "metadata_options_put_response_hop_limit",
+      "region",
+      "title"
+    ],
+    "id_column": "launch_configuration_arn"
+  },
+  {
+    "table": "aws_ec2_launch_template",
+    "columns": [
+      "account_id",
+      "arn",
+      "launch_template_id",
+      "region",
+      "title"
+    ],
+    "id_column": "launch_template_id"
+  },
+  {
+    "table": "aws_ec2_network_interface",
+    "columns": [
+      "arn",
+      "groups",
+      "region",
+      "title"
+    ],
+    "id_column": "title"
+  },
+  {
+    "table": "aws_ec2_network_load_balancer",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "arn",
+      "availability_zones",
+      "region",
+      "scheme",
+      "security_groups",
+      "tags",
+      "title",
+      "vpc_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ec2_regional_settings",
+    "columns": [
+      "account_id",
+      "arn",
+      "default_ebs_encryption_enabled",
+      "partition",
+      "region",
+      "title"
+    ],
+    "id_column": "title"
+  },
+  {
+    "table": "aws_ec2_transit_gateway",
+    "columns": [
+      "account_id",
+      "arn",
+      "auto_accept_shared_attachments",
+      "region",
+      "title",
+      "transit_gateway_arn"
+    ],
+    "id_column": "transit_gateway_arn"
+  },
+  {
+    "table": "aws_ecr_registry_scanning_configuration",
+    "columns": [
+      "arn",
+      "region",
+      "registry_id",
+      "scanning_configuration",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ecr_repository",
+    "columns": [
+      "account_id",
+      "arn",
+      "image_scanning_configuration",
+      "image_tag_mutability",
+      "lifecycle_policy",
+      "policy",
+      "region",
+      "repository_name",
+      "repository_uri",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ecs_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "cluster_arn",
+      "region",
+      "settings",
+      "title"
+    ],
+    "id_column": "cluster_arn"
+  },
+  {
+    "table": "aws_ecs_service",
+    "columns": [
+      "account_id",
+      "arn",
+      "cluster_arn",
+      "launch_type",
+      "network_configuration",
+      "platform_version",
+      "region",
+      "service_name",
+      "task_definition",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ecs_task_definition",
+    "columns": [
+      "account_id",
+      "arn",
+      "container_definitions",
+      "network_mode",
+      "pid_mode",
+      "region",
+      "task_definition_arn",
+      "title"
+    ],
+    "id_column": "task_definition_arn"
+  },
+  {
+    "table": "aws_efs_access_point",
+    "columns": [
+      "access_point_arn",
+      "account_id",
+      "arn",
+      "posix_user",
+      "region",
+      "root_directory",
+      "title"
+    ],
+    "id_column": "access_point_arn"
+  },
+  {
+    "table": "aws_efs_file_system",
+    "columns": [
+      "account_id",
+      "arn",
+      "automatic_backups",
+      "encrypted",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_eks_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "encryption_config",
+      "endpoint",
+      "logging",
+      "region",
+      "resources_vpc_config",
+      "status",
+      "title",
+      "version"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_elastic_beanstalk_environment",
+    "columns": [
+      "account_id",
+      "application_name",
+      "arn",
+      "health",
+      "health_status",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_elasticache_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "auto_minor_version_upgrade",
+      "cache_subnet_group_name",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_elasticache_replication_group",
+    "columns": [
+      "account_id",
+      "arn",
+      "at_rest_encryption_enabled",
+      "auth_token_enabled",
+      "automatic_failover",
+      "region",
+      "replication_group_id",
+      "snapshot_retention_limit",
+      "title",
+      "transit_encryption_enabled"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_elasticsearch_domain",
+    "columns": [
+      "account_id",
+      "arn",
+      "domain_endpoint_options",
+      "elasticsearch_cluster_config",
+      "enabled",
+      "encryption_at_rest_options",
+      "log_publishing_options",
+      "region",
+      "title",
+      "vpc_options"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_emr_block_public_access_configuration",
+    "columns": [
+      "account_id",
+      "arn",
+      "block_public_security_group_rules",
+      "partition",
+      "permitted_public_security_group_rule_ranges",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_emr_cluster",
+    "columns": [
+      "account_id",
+      "arn",
+      "cluster_arn",
+      "ec2_instance_attributes",
+      "kerberos_attributes",
+      "region",
+      "status",
+      "title"
+    ],
+    "id_column": "cluster_arn"
+  },
+  {
+    "table": "aws_eventbridge_bus",
+    "columns": [
+      "account_id",
+      "arn",
+      "name",
+      "policy_std",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_fsx_file_system",
+    "columns": [
+      "account_id",
+      "arn",
+      "file_system_type",
+      "open_zfs_configuration",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_guardduty_detector",
+    "columns": [
+      "account_id",
+      "arn",
+      "master_account",
+      "region",
+      "status",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_guardduty_finding",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "service",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
     "table": "aws_iam_access_key",
     "columns": [
       "access_key_id",
       "account_id",
+      "arn",
       "create_date",
       "partition",
       "region",
@@ -49,26 +893,10 @@ var (
     "id_column": "access_key_id"
   },
   {
-    "table": "aws_iam_user",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "arn",
-      "attached_policy_arns",
-      "groups",
-      "inline_policies",
-      "inline_policies_std",
-      "name",
-      "region",
-      "tags",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
     "table": "aws_iam_account_password_policy",
     "columns": [
       "account_id",
+      "arn",
       "max_password_age",
       "minimum_password_length",
       "password_reuse_prevention",
@@ -76,20 +904,62 @@ var (
       "require_lowercase_characters",
       "require_numbers",
       "require_symbols",
-      "require_uppercase_characters"
+      "require_uppercase_characters",
+      "title"
     ],
     "id_column": ""
   },
   {
-    "table": "aws_account_alternate_contact",
+    "table": "aws_iam_account_summary",
     "columns": [
+      "account_access_keys_present",
       "account_id",
-      "contact_type",
-      "name",
+      "account_mfa_enabled",
+      "arn",
+      "partition",
       "region",
       "title"
     ],
-    "id_column": "title"
+    "id_column": ""
+  },
+  {
+    "table": "aws_iam_credential_report",
+    "columns": [
+      "access_key_1_active",
+      "access_key_1_last_rotated",
+      "access_key_1_last_used_date",
+      "access_key_2_active",
+      "access_key_2_last_rotated",
+      "access_key_2_last_used_date",
+      "account_id",
+      "arn",
+      "mfa_active",
+      "password_enabled",
+      "password_last_changed",
+      "password_last_used",
+      "region",
+      "title",
+      "user_arn",
+      "user_creation_time",
+      "user_name"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_iam_group",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "arn",
+      "attached_policy_arns",
+      "inline_policies",
+      "inline_policies_std",
+      "name",
+      "region",
+      "title",
+      "users"
+    ],
+    "id_column": "arn"
   },
   {
     "table": "aws_iam_policy",
@@ -133,176 +1003,49 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_region",
+    "table": "aws_iam_user",
     "columns": [
+      "_ctx",
       "account_id",
+      "arn",
+      "attached_policy_arns",
+      "groups",
+      "inline_policies",
+      "inline_policies_std",
       "name",
-      "opt_in_status",
-      "partition",
       "region",
+      "tags",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_iam_virtual_mfa_device",
+    "columns": [
+      "arn",
+      "region",
+      "serial_number",
       "title"
     ],
     "id_column": "title"
   },
   {
-    "table": "aws_s3_bucket",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "acl",
-      "arn",
-      "block_public_acls",
-      "block_public_policy",
-      "bucket_policy_is_public",
-      "event_notification_configuration",
-      "ignore_public_acls",
-      "lifecycle_rules",
-      "logging",
-      "name",
-      "object_lock_configuration",
-      "object_ownership_controls",
-      "policy",
-      "policy_std",
-      "region",
-      "replication",
-      "restrict_public_buckets",
-      "server_side_encryption_configuration",
-      "tags",
-      "title",
-      "versioning_enabled",
-      "versioning_mfa_delete"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_accessanalyzer_analyzer",
+    "table": "aws_kinesis_stream",
     "columns": [
       "account_id",
       "arn",
-      "name",
+      "encryption_type",
       "region",
+      "stream_arn",
       "title"
     ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_macie2_classification_job",
-    "columns": [
-      "s3_job_definition",
-      "arn",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ebs_volume",
-    "columns": [
-      "account_id",
-      "arn",
-      "encrypted",
-      "region",
-      "state",
-      "tags",
-      "title",
-      "volume_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_rds_db_instance",
-    "columns": [
-      "account_id",
-      "arn",
-      "auto_minor_version_upgrade",
-      "backup_retention_period",
-      "class",
-      "copy_tags_to_snapshot",
-      "db_instance_identifier",
-      "deletion_protection",
-      "enabled_cloudwatch_logs_exports",
-      "engine",
-      "enhanced_monitoring_resource_arn",
-      "iam_database_authentication_enabled",
-      "master_user_name",
-      "multi_az",
-      "port",
-      "publicly_accessible",
-      "region",
-      "storage_encrypted",
-      "tags",
-      "title",
-      "vpc_id",
-      "vpc_security_groups"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_efs_file_system",
-    "columns": [
-      "account_id",
-      "arn",
-      "automatic_backups",
-      "encrypted",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_s3_account_settings",
-    "columns": [
-      "account_id",
-      "block_public_acls",
-      "block_public_policy",
-      "ignore_public_acls",
-      "region",
-      "restrict_public_buckets",
-      "title"
-    ],
-    "id_column": "title"
-  },
-  {
-    "table": "aws_cloudtrail_trail",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "advanced_event_selectors",
-      "arn",
-      "event_selectors",
-      "home_region",
-      "include_global_service_events",
-      "is_logging",
-      "is_multi_region_trail",
-      "is_organization_trail",
-      "kms_key_id",
-      "latest_delivery_time",
-      "log_file_validation_enabled",
-      "log_group_arn",
-      "region",
-      "s3_bucket_name",
-      "s3_bucket_name",
-      "tags",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_config_configuration_recorder",
-    "columns": [
-      "account_id",
-      "arn",
-      "recording_group",
-      "region",
-      "status",
-      "title"
-    ],
-    "id_column": "arn"
+    "id_column": "stream_arn"
   },
   {
     "table": "aws_kms_key",
     "columns": [
       "account_id",
+      "aliases",
       "arn",
       "deletion_date",
       "key_manager",
@@ -315,259 +1058,66 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_vpc",
+    "table": "aws_lambda_function",
     "columns": [
       "account_id",
       "arn",
-      "owner_id",
+      "dead_letter_config_target_arn",
+      "package_type",
+      "policy_std",
       "region",
+      "reserved_concurrent_executions",
+      "runtime",
       "title",
-      "vpc_id"
+      "vpc_id",
+      "vpc_subnet_ids"
     ],
     "id_column": "arn"
   },
   {
-    "table": "aws_vpc_flow_log",
+    "table": "aws_macie2_classification_job",
     "columns": [
+      "arn",
       "region",
-      "resource_id",
+      "s3_job_definition",
       "title"
     ],
-    "id_column": "resource_id"
+    "id_column": "arn"
   },
   {
-    "table": "aws_sns_topic_subscription",
-    "columns": [
-      "region",
-      "title",
-      "topic_arn"
-    ],
-    "id_column": "topic_arn"
-  },
-  {
-    "table": "aws_securityhub_hub",
-    "columns": [
-      "account_id",
-      "hub_arn",
-      "region",
-      "title"
-    ],
-    "id_column": "hub_arn"
-  },
-  {
-    "table": "aws_vpc_network_acl",
+    "table": "aws_msk_cluster",
     "columns": [
       "account_id",
       "arn",
-      "associations",
-      "entries",
-      "network_acl_id",
-      "partition",
+      "provisioned",
       "region",
       "title"
     ],
     "id_column": "arn"
   },
   {
-    "table": "aws_vpc_security_group",
+    "table": "aws_neptune_db_cluster",
     "columns": [
       "account_id",
       "arn",
-      "group_id",
-      "group_name",
-      "ip_permissions",
-      "ip_permissions_egress",
+      "backup_retention_period",
+      "copy_tags_to_snapshot",
+      "deletion_protection",
+      "enabled_cloudwatch_logs_exports",
+      "engine",
+      "iam_database_authentication_enabled",
       "region",
+      "storage_encrypted",
       "title"
     ],
     "id_column": "arn"
   },
   {
-    "table": "aws_vpc_security_group_rule",
-    "columns": [
-      "cidr_ipv4",
-      "cidr_ipv6",
-      "from_port",
-      "group_id",
-      "group_name",
-      "ip_protocol",
-      "is_egress",
-      "region",
-      "security_group_rule_id",
-      "title",
-      "to_port",
-      "type"
-    ],
-    "id_column": "security_group_rule_id"
-  },
-  {
-    "table": "aws_ec2_application_load_balancer",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "arn",
-      "availability_zones",
-      "load_balancer_attributes",
-      "region",
-      "scheme",
-      "security_groups",
-      "tags",
-      "title",
-      "vpc_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_redshift_cluster",
-    "columns": [
-      "account_id",
-      "allow_version_upgrade",
-      "arn",
-      "automated_snapshot_retention_period",
-      "cluster_namespace_arn",
-      "cluster_parameter_groups",
-      "db_name",
-      "encrypted",
-      "enhanced_vpc_routing",
-      "kms_key_id",
-      "logging_status",
-      "master_username",
-      "publicly_accessible",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_acm_certificate",
-    "columns": [
-      "account_id",
-      "certificate_arn",
-      "not_after",
-      "region",
-      "renewal_eligibility",
-      "title"
-    ],
-    "id_column": "certificate_arn"
-  },
-  {
-    "table": "aws_api_gateway_stage",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "arn",
-      "client_certificate_id",
-      "method_settings",
-      "name",
-      "partition",
-      "region",
-      "rest_api_id",
-      "tags",
-      "title",
-      "tracing_enabled",
-      "web_acl_arn"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_cloudfront_distribution",
+    "table": "aws_neptune_db_cluster_snapshot",
     "columns": [
       "account_id",
       "arn",
-      "default_cache_behavior",
-      "default_root_object",
-      "logging",
-      "origin_groups",
-      "origins",
-      "region",
-      "title",
-      "viewer_certificate",
-      "web_acl_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_classic_load_balancer",
-    "columns": [
-      "access_log_enabled",
-      "account_id",
-      "additional_attributes",
-      "arn",
-      "availability_zones",
-      "connection_draining_enabled",
-      "cross_zone_load_balancing_enabled",
-      "instances",
-      "listener_descriptions",
-      "name",
-      "partition",
-      "region",
-      "scheme",
-      "security_groups",
-      "source_security_group_name",
-      "tags",
-      "title",
-      "vpc_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_dax_cluster",
-    "columns": [
-      "account_id",
-      "arn",
-      "region",
-      "sse_description",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_dynamodb_table",
-    "columns": [
-      "account_id",
-      "arn",
-      "billing_mode",
-      "name",
-      "point_in_time_recovery_description",
-      "region",
-      "sse_description",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_elasticsearch_domain",
-    "columns": [
-      "account_id",
-      "arn",
-      "domain_endpoint_options",
-      "elasticsearch_cluster_config",
-      "enabled",
-      "encryption_at_rest_options",
-      "log_publishing_options",
-      "region",
-      "title",
-      "vpc_options"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_cloudwatch_log_group",
-    "columns": [
-      "account_id",
-      "arn",
-      "kms_key_id",
-      "region",
-      "retention_in_days",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_rds_db_cluster_snapshot",
-    "columns": [
-      "account_id",
-      "arn",
+      "db_cluster_snapshot_arn",
       "db_cluster_snapshot_attributes",
       "region",
       "storage_encrypted",
@@ -576,466 +1126,14 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_rds_db_snapshot",
+    "table": "aws_networkfirewall_firewall",
     "columns": [
       "account_id",
       "arn",
-      "db_snapshot_attributes",
-      "encrypted",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_sagemaker_endpoint_configuration",
-    "columns": [
-      "account_id",
-      "arn",
-      "kms_key_id",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_sagemaker_notebook_instance",
-    "columns": [
-      "account_id",
-      "arn",
-      "direct_internet_access",
-      "kms_key_id",
-      "region",
-      "root_access",
-      "subnet_id",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_sns_topic",
-    "columns": [
-      "account_id",
-      "application_failure_feedback_role_arn",
-      "firehose_failure_feedback_role_arn",
-      "http_failure_feedback_role_arn",
-      "kms_master_key_id",
-      "lambda_failure_feedback_role_arn",
-      "region",
-      "sqs_failure_feedback_role_arn",
-      "title",
-      "topic_arn"
-    ],
-    "id_column": "topic_arn"
-  },
-  {
-    "table": "aws_wafv2_web_acl",
-    "columns": [
-      "account_id",
-      "arn",
+      "delete_protection",
       "logging_configuration",
       "region",
-      "rules",
       "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_autoscaling_group",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "autoscaling_group_arn",
-      "availability_zones",
-      "health_check_type",
-      "launch_template_id",
-      "load_balancer_names",
-      "mixed_instances_policy_launch_template_overrides",
-      "region",
-      "tags",
-      "target_group_arns",
-      "title"
-    ],
-    "id_column": "autoscaling_group_arn"
-  },
-  {
-    "table": "aws_api_gatewayv2_route",
-    "columns": [
-      "account_id",
-      "api_id",
-      "authorization_type",
-      "partition",
-      "region",
-      "route_id",
-      "title"
-    ],
-    "id_column": "api_id"
-  },
-  {
-    "table": "aws_api_gatewayv2_stage",
-    "columns": [
-      "_ctx",
-      "access_log_settings",
-      "account_id",
-      "api_id",
-      "default_route_logging_level",
-      "partition",
-      "region",
-      "stage_name",
-      "tags",
-      "title"
-    ],
-    "id_column": "api_id"
-  },
-  {
-    "table": "aws_ec2_launch_configuration",
-    "columns": [
-      "account_id",
-      "associate_public_ip_address",
-      "launch_configuration_arn",
-      "metadata_options_http_tokens",
-      "metadata_options_put_response_hop_limit",
-      "region",
-      "title"
-    ],
-    "id_column": "launch_configuration_arn"
-  },
-  {
-    "table": "aws_cloudformation_stack",
-    "columns": [
-      "account_id",
-      "id",
-      "notification_arns",
-      "region",
-      "stack_drift_status",
-      "title"
-    ],
-    "id_column": "notification_arns"
-  },
-  {
-    "table": "aws_codebuild_project",
-    "columns": [
-      "account_id",
-      "arn",
-      "environment",
-      "logs_config",
-      "region",
-      "source",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_dms_replication_instance",
-    "columns": [
-      "account_id",
-      "arn",
-      "publicly_accessible",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ebs_snapshot",
-    "columns": [
-      "account_id",
-      "arn",
-      "create_volume_permissions",
-      "partition",
-      "region",
-      "snapshot_id",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_regional_settings",
-    "columns": [
-      "account_id",
-      "default_ebs_encryption_enabled",
-      "partition",
-      "region",
-      "title"
-    ],
-    "id_column": "title"
-  },
-  {
-    "table": "aws_ec2_instance",
-    "columns": [
-      "account_id",
-      "arn",
-      "ebs_optimized",
-      "iam_instance_profile_id",
-      "instance_id",
-      "instance_state",
-      "instance_type",
-      "metadata_options",
-      "monitoring_state",
-      "network_interfaces",
-      "private_dns_name",
-      "private_ip_address",
-      "public_ip_address",
-      "region",
-      "security_groups",
-      "state_transition_time",
-      "tags",
-      "title",
-      "virtualization_type",
-      "vpc_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_vpc_subnet",
-    "columns": [
-      "account_id",
-      "map_public_ip_on_launch",
-      "region",
-      "title",
-      "subnet_id"
-    ],
-    "id_column": "subnet_id"
-  },
-  {
-    "table": "aws_vpc_endpoint",
-    "columns": [
-      "region",
-      "service_name",
-      "title",
-      "vpc_id"
-    ],
-    "id_column": "vpc_id"
-  },
-  {
-    "table": "aws_vpc_vpn_connection",
-    "columns": [
-      "account_id",
-      "arn",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_transit_gateway",
-    "columns": [
-      "account_id",
-      "auto_accept_shared_attachments",
-      "region",
-      "title",
-      "transit_gateway_arn"
-    ],
-    "id_column": "transit_gateway_arn"
-  },
-  {
-    "table": "aws_ec2_network_interface",
-    "columns": [
-      "groups",
-      "region",
-      "title"
-    ],
-    "id_column": "title"
-  },
-  {
-    "table": "aws_ec2_launch_template",
-    "columns": [
-      "account_id",
-      "launch_template_id",
-      "region",
-      "title"
-    ],
-    "id_column": "launch_template_id"
-  },
-  {
-    "table": "aws_ecr_repository",
-    "columns": [
-      "account_id",
-      "arn",
-      "image_scanning_configuration",
-      "image_tag_mutability",
-      "lifecycle_policy",
-      "policy",
-      "region",
-      "repository_name",
-      "repository_uri",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ecs_task",
-    "columns": [
-      "account_id",
-      "cluster_arn",
-      "cluster_name",
-      "connectivity",
-      "group",
-      "last_status",
-      "region",
-      "service_name",
-      "task_arn",
-      "task_definition_arn"
-    ],
-    "id_column": "task_arn"
-  },
-  {
-    "table": "aws_ecs_task_definition",
-    "columns": [
-      "account_id",
-      "container_definitions",
-      "network_mode",
-      "pid_mode",
-      "region",
-      "task_definition_arn",
-      "title"
-    ],
-    "id_column": "task_definition_arn"
-  },
-  {
-    "table": "aws_ecs_service",
-    "columns": [
-      "account_id",
-      "arn",
-      "cluster_arn",
-      "launch_type",
-      "network_configuration",
-      "platform_version",
-      "region",
-      "service_name",
-      "task_definition",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ecs_cluster",
-    "columns": [
-      "account_id",
-      "region",
-      "settings",
-      "title",
-      "cluster_arn"
-    ],
-    "id_column": "cluster_arn"
-  },
-  {
-    "table": "aws_efs_access_point",
-    "columns": [
-      "access_point_arn",
-      "account_id",
-      "posix_user",
-      "region",
-      "root_directory",
-      "title"
-    ],
-    "id_column": "access_point_arn"
-  },
-  {
-    "table": "aws_eks_cluster",
-    "columns": [
-      "account_id",
-      "arn",
-      "encryption_config",
-      "endpoint",
-      "region",
-      "resources_vpc_config",
-      "status",
-      "title",
-      "version"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_elasticache_replication_group",
-    "columns": [
-      "account_id",
-      "arn",
-      "at_rest_encryption_enabled",
-      "auth_token_enabled",
-      "automatic_failover",
-      "region",
-      "replication_group_id",
-      "snapshot_retention_limit",
-      "title",
-      "transit_encryption_enabled"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_elasticache_cluster",
-    "columns": [
-      "account_id",
-      "arn",
-      "auto_minor_version_upgrade",
-      "cache_subnet_group_name",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_elastic_beanstalk_environment",
-    "columns": [
-      "account_id",
-      "application_name",
-      "arn",
-      "health",
-      "health_status",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_emr_cluster",
-    "columns": [
-      "account_id",
-      "cluster_arn",
-      "ec2_instance_attributes",
-      "kerberos_attributes",
-      "region",
-      "status",
-      "title"
-    ],
-    "id_column": "cluster_arn"
-  },
-  {
-    "table": "aws_guardduty_detector",
-    "columns": [
-      "account_id",
-      "arn",
-      "master_account",
-      "region",
-      "status",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_kinesis_stream",
-    "columns": [
-      "account_id",
-      "encryption_type",
-      "region",
-      "title",
-      "stream_arn"
-    ],
-    "id_column": "stream_arn"
-  },
-  {
-    "table": "aws_lambda_function",
-    "columns": [
-      "account_id",
-      "arn",
-      "dead_letter_config_target_arn",
-      "package_type",
-      "region",
-      "reserved_concurrent_executions",
-      "runtime",
-      "title",
-      "vpc_id",
-      "vpc_subnet_ids"
     ],
     "id_column": "arn"
   },
@@ -1076,35 +1174,9 @@ var (
       "log_publishing_options",
       "node_to_node_encryption_options_enabled",
       "region",
+      "service_software_options",
       "title",
       "vpc_options"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_network_load_balancer",
-    "columns": [
-      "_ctx",
-      "account_id",
-      "arn",
-      "availability_zones",
-      "region",
-      "scheme",
-      "security_groups",
-      "tags",
-      "title",
-      "vpc_id"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_ec2_gateway_load_balancer",
-    "columns": [
-      "account_id",
-      "arn",
-      "availability_zones",
-      "region",
-      "title"
     ],
     "id_column": "arn"
   },
@@ -1113,6 +1185,7 @@ var (
     "columns": [
       "account_id",
       "arn",
+      "auto_minor_version_upgrade",
       "backtrack_window",
       "copy_tags_to_snapshot",
       "db_cluster_identifier",
@@ -1125,9 +1198,22 @@ var (
       "multi_az",
       "port",
       "region",
+      "storage_encrypted",
       "tags",
       "title",
       "vpc_security_groups"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_rds_db_cluster_snapshot",
+    "columns": [
+      "account_id",
+      "arn",
+      "db_cluster_snapshot_attributes",
+      "region",
+      "storage_encrypted",
+      "title"
     ],
     "id_column": "arn"
   },
@@ -1141,6 +1227,178 @@ var (
       "event_categories_list",
       "region",
       "source_type",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_rds_db_instance",
+    "columns": [
+      "account_id",
+      "arn",
+      "auto_minor_version_upgrade",
+      "backup_retention_period",
+      "class",
+      "copy_tags_to_snapshot",
+      "db_instance_identifier",
+      "deletion_protection",
+      "enabled_cloudwatch_logs_exports",
+      "engine",
+      "enhanced_monitoring_resource_arn",
+      "iam_database_authentication_enabled",
+      "master_user_name",
+      "multi_az",
+      "port",
+      "publicly_accessible",
+      "region",
+      "storage_encrypted",
+      "tags",
+      "title",
+      "vpc_id",
+      "vpc_security_groups"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_rds_db_snapshot",
+    "columns": [
+      "account_id",
+      "arn",
+      "db_snapshot_attributes",
+      "encrypted",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_redshift_cluster",
+    "columns": [
+      "account_id",
+      "allow_version_upgrade",
+      "arn",
+      "automated_snapshot_retention_period",
+      "cluster_namespace_arn",
+      "cluster_parameter_groups",
+      "db_name",
+      "encrypted",
+      "enhanced_vpc_routing",
+      "kms_key_id",
+      "logging_status",
+      "master_username",
+      "publicly_accessible",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_region",
+    "columns": [
+      "account_id",
+      "arn",
+      "name",
+      "opt_in_status",
+      "partition",
+      "region",
+      "title"
+    ],
+    "id_column": "title"
+  },
+  {
+    "table": "aws_route53_zone",
+    "columns": [
+      "account_id",
+      "arn",
+      "id",
+      "private_zone",
+      "query_logging_configs",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_s3_access_point",
+    "columns": [
+      "access_point_arn",
+      "account_id",
+      "arn",
+      "block_public_acls",
+      "block_public_policy",
+      "ignore_public_acls",
+      "name",
+      "region",
+      "restrict_public_buckets",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_s3_account_settings",
+    "columns": [
+      "account_id",
+      "arn",
+      "block_public_acls",
+      "block_public_policy",
+      "ignore_public_acls",
+      "region",
+      "restrict_public_buckets",
+      "title"
+    ],
+    "id_column": "title"
+  },
+  {
+    "table": "aws_s3_bucket",
+    "columns": [
+      "_ctx",
+      "account_id",
+      "acl",
+      "arn",
+      "block_public_acls",
+      "block_public_policy",
+      "bucket_policy_is_public",
+      "event_notification_configuration",
+      "ignore_public_acls",
+      "lifecycle_rules",
+      "logging",
+      "name",
+      "object_lock_configuration",
+      "object_ownership_controls",
+      "policy",
+      "policy_std",
+      "region",
+      "replication",
+      "restrict_public_buckets",
+      "server_side_encryption_configuration",
+      "tags",
+      "title",
+      "versioning_enabled",
+      "versioning_mfa_delete"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_sagemaker_endpoint_configuration",
+    "columns": [
+      "account_id",
+      "arn",
+      "kms_key_id",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_sagemaker_notebook_instance",
+    "columns": [
+      "account_id",
+      "arn",
+      "direct_internet_access",
+      "kms_key_id",
+      "region",
+      "root_access",
+      "subnet_id",
       "title"
     ],
     "id_column": "arn"
@@ -1164,9 +1422,49 @@ var (
     "id_column": "arn"
   },
   {
+    "table": "aws_securityhub_hub",
+    "columns": [
+      "account_id",
+      "arn",
+      "hub_arn",
+      "region",
+      "title"
+    ],
+    "id_column": "hub_arn"
+  },
+  {
+    "table": "aws_sfn_state_machine",
+    "columns": [
+      "account_id",
+      "arn",
+      "logging_configuration",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_sns_topic",
+    "columns": [
+      "account_id",
+      "application_failure_feedback_role_arn",
+      "arn",
+      "firehose_failure_feedback_role_arn",
+      "http_failure_feedback_role_arn",
+      "kms_master_key_id",
+      "lambda_failure_feedback_role_arn",
+      "region",
+      "sqs_failure_feedback_role_arn",
+      "title",
+      "topic_arn"
+    ],
+    "id_column": "topic_arn"
+  },
+  {
     "table": "aws_sqs_queue",
     "columns": [
       "account_id",
+      "arn",
       "kms_master_key_id",
       "queue_arn",
       "region",
@@ -1175,10 +1473,201 @@ var (
     "id_column": "queue_arn"
   },
   {
+    "table": "aws_ssm_document",
+    "columns": [
+      "account_id",
+      "account_ids",
+      "arn",
+      "name",
+      "owner_type",
+      "partition",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
     "table": "aws_ssm_managed_instance",
     "columns": [
       "arn",
       "instance_id",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_ssm_managed_instance_compliance",
+    "columns": [
+      "account_id",
+      "arn",
+      "compliance_type",
+      "id",
+      "region",
+      "resource_id",
+      "status",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_vpc",
+    "columns": [
+      "account_id",
+      "arn",
+      "owner_id",
+      "region",
+      "title",
+      "vpc_id"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_vpc_eip",
+    "columns": [
+      "account_id",
+      "allocation_id",
+      "arn",
+      "association_id",
+      "partition",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_vpc_endpoint",
+    "columns": [
+      "arn",
+      "region",
+      "service_name",
+      "title",
+      "vpc_id"
+    ],
+    "id_column": "vpc_id"
+  },
+  {
+    "table": "aws_vpc_flow_log",
+    "columns": [
+      "arn",
+      "region",
+      "resource_id",
+      "title"
+    ],
+    "id_column": "resource_id"
+  },
+  {
+    "table": "aws_vpc_internet_gateway",
+    "columns": [
+      "account_id",
+      "arn",
+      "attachments",
+      "partition",
+      "region",
+      "title"
+    ],
+    "id_column": "title"
+  },
+  {
+    "table": "aws_vpc_network_acl",
+    "columns": [
+      "account_id",
+      "arn",
+      "associations",
+      "entries",
+      "network_acl_id",
+      "partition",
+      "region",
+      "tags",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_vpc_route_table",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "route_table_id",
+      "routes",
+      "title"
+    ],
+    "id_column": "route_table_id"
+  },
+  {
+    "table": "aws_vpc_security_group",
+    "columns": [
+      "account_id",
+      "arn",
+      "group_id",
+      "group_name",
+      "ip_permissions",
+      "ip_permissions_egress",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_vpc_security_group_rule",
+    "columns": [
+      "arn",
+      "cidr_ipv4",
+      "cidr_ipv6",
+      "from_port",
+      "group_id",
+      "group_name",
+      "ip_protocol",
+      "is_egress",
+      "region",
+      "security_group_rule_id",
+      "title",
+      "to_port",
+      "type"
+    ],
+    "id_column": "security_group_rule_id"
+  },
+  {
+    "table": "aws_vpc_subnet",
+    "columns": [
+      "account_id",
+      "arn",
+      "map_public_ip_on_launch",
+      "region",
+      "subnet_id",
+      "title"
+    ],
+    "id_column": "subnet_id"
+  },
+  {
+    "table": "aws_vpc_vpn_connection",
+    "columns": [
+      "account_id",
+      "arn",
+      "region",
+      "title"
+    ],
+    "id_column": "arn"
+  },
+  {
+    "table": "aws_waf_rule",
+    "columns": [
+      "account_id",
+      "arn",
+      "predicates",
+      "region",
+      "rule_id",
+      "title"
+    ],
+    "id_column": "rule_id"
+  },
+  {
+    "table": "aws_waf_rule_group",
+    "columns": [
+      "account_id",
+      "activated_rules",
+      "arn",
       "region",
       "title"
     ],
@@ -1232,168 +1721,24 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_waf_rule",
-    "columns": [
-      "account_id",
-      "predicates",
-      "region",
-      "rule_id",
-      "title"
-    ],
-    "id_column": "rule_id"
-  },
-  {
-    "table": "aws_waf_rule_group",
-    "columns": [
-      "account_id",
-      "activated_rules",
-      "arn",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_vpc_internet_gateway",
-    "columns": [
-      "account_id",
-      "attachments",
-      "partition",
-      "region",
-      "title"
-    ],
-    "id_column": "title"
-  },
-  {
-    "table": "aws_iam_group",
+    "table": "aws_wafv2_rule_group",
     "columns": [
       "account_id",
       "arn",
       "region",
       "title",
-      "users"
+      "visibility_config"
     ],
     "id_column": "arn"
   },
   {
-    "table": "aws_cloudwatch_alarm",
-    "columns": [
-      "account_id",
-      "actions_enabled",
-      "alarm_actions",
-      "arn",
-      "insufficient_data_actions",
-      "ok_actions",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_guardduty_finding",
+    "table": "aws_wafv2_web_acl",
     "columns": [
       "account_id",
       "arn",
+      "logging_configuration",
       "region",
-      "service",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_backup_plan",
-    "columns": [
-      "account_id",
-      "arn",
-      "backup_plan",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_backup_recovery_point",
-    "columns": [
-      "account_id",
-      "is_encrypted",
-      "lifecycle",
-      "recovery_point_arn",
-      "region"
-    ],
-    "id_column": "recovery_point_arn"
-  },
-  {
-    "table": "aws_backup_vault",
-    "columns": [
-      "account_id",
-      "arn",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_backup_protected_resource",
-    "columns": [
-      "region",
-      "resource_arn",
-      "resource_type"
-    ],
-    "id_column": "resource_arn"
-  },
-  {
-    "table": "aws_backup_selection",
-    "columns": [
-      "arn",
-      "backup_plan_id",
-      "list_of_tags",
-      "region",
-      "resources",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_fsx_file_system",
-    "columns": [
-      "account_id",
-      "arn",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_vpc_route_table",
-    "columns": [
-      "account_id",
-      "region",
-      "route_table_id",
-      "routes",
-      "title"
-    ],
-    "id_column": "route_table_id"
-  },
-  {
-    "table": "aws_vpc_eip",
-    "columns": [
-      "account_id",
-      "allocation_id",
-      "arn",
-      "association_id",
-      "partition",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
-    "table": "aws_codedeploy_app",
-    "columns": [
-      "application_name",
-      "arn",
-      "compute_platform",
-      "region",
+      "rules",
       "title"
     ],
     "id_column": "arn"
