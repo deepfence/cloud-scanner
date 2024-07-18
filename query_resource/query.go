@@ -32,7 +32,7 @@ var (
 
 func init() {
 	var awsCloudTables []CloudResourceInfo
-	err := json.Unmarshal([]byte(awsCloudTablesJson), &awsCloudTables)
+	err := json.Unmarshal([]byte(AWSCloudTablesJson), &awsCloudTables)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -40,7 +40,7 @@ func init() {
 	cloudProviderToResourceMap[util.CloudProviderAWS] = awsCloudTables
 
 	var gcpCloudTables []CloudResourceInfo
-	err = json.Unmarshal([]byte(gcpCloudTablesJson), &gcpCloudTables)
+	err = json.Unmarshal([]byte(GCPCloudTablesJson), &gcpCloudTables)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -48,7 +48,7 @@ func init() {
 	cloudProviderToResourceMap[util.CloudProviderGCP] = gcpCloudTables
 
 	var azureCloudTables []CloudResourceInfo
-	err = json.Unmarshal([]byte(azureCloudTablesJson), &azureCloudTables)
+	err = json.Unmarshal([]byte(AzureCloudTablesJson), &azureCloudTables)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
