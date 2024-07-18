@@ -1,7 +1,7 @@
 package query_resource
 
 var (
-	gcpCloudTablesJson = `[
+	GCPCloudTablesJson = `[
   {
     "table": "gcp_apikeys_key",
     "columns": [
@@ -11,11 +11,10 @@ var (
       "name",
       "project",
       "restrictions",
-      "self_link",
       "title",
       "uid"
     ],
-    "id_column": "self_link"
+    "id_column": "uid"
   },
   {
     "table": "gcp_audit_policy",
@@ -23,9 +22,7 @@ var (
       "_ctx",
       "audit_log_configs",
       "location",
-      "name",
       "project",
-      "self_link",
       "service"
     ],
     "id_column": "service"
@@ -205,7 +202,6 @@ var (
       "cluster_name",
       "config",
       "location",
-      "name",
       "project",
       "self_link",
       "title"
@@ -232,8 +228,7 @@ var (
       "enable_logging",
       "location",
       "name",
-      "networks",
-      "self_link"
+      "networks"
     ],
     "id_column": "name"
   },
@@ -243,9 +238,7 @@ var (
       "_ctx",
       "bindings",
       "location",
-      "name",
       "project",
-      "self_link",
       "title",
       "version"
     ],
@@ -292,8 +285,7 @@ var (
       "location",
       "metric_descriptor_type",
       "name",
-      "project",
-      "self_link"
+      "project"
     ],
     "id_column": "name"
   },
@@ -316,10 +308,8 @@ var (
       "_ctx",
       "display_name",
       "essential_contacts",
-      "location",
       "name",
       "organization_id",
-      "self_link",
       "title"
     ],
     "id_column": "organization_id"
@@ -330,13 +320,12 @@ var (
       "access_approval_settings",
       "create_time",
       "lifecycle_state",
-      "location",
       "name",
       "project_id",
       "project_number",
       "self_link"
     ],
-    "id_column": "project_id"
+    "id_column": "self_link"
   },
   {
     "table": "gcp_project_service",
@@ -344,7 +333,6 @@ var (
       "location",
       "name",
       "project",
-      "self_link",
       "state"
     ],
     "id_column": "name"
@@ -357,7 +345,6 @@ var (
       "location",
       "name",
       "project",
-      "self_link",
       "title",
       "unique_id"
     ],
@@ -370,11 +357,11 @@ var (
       "location",
       "name",
       "project",
-      "self_link",
+	  "title",
       "service_account_name",
       "valid_after_time"
     ],
-    "id_column": "service_account_name"
+    "id_column": "title"
   },
   {
     "table": "gcp_sql_database_instance",

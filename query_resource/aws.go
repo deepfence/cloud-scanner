@@ -1,7 +1,7 @@
 package query_resource
 
 var (
-	awsCloudTablesJson = `[
+	AWSCloudTablesJson = `[
   {
     "table": "aws_accessanalyzer_analyzer",
     "columns": [
@@ -29,7 +29,6 @@ var (
     "table": "aws_account_alternate_contact",
     "columns": [
       "account_id",
-      "arn",
       "contact_type",
       "name",
       "region",
@@ -41,7 +40,6 @@ var (
     "table": "aws_acm_certificate",
     "columns": [
       "account_id",
-      "arn",
       "certificate_arn",
       "key_algorithm",
       "not_after",
@@ -87,7 +85,6 @@ var (
     "columns": [
       "account_id",
       "api_id",
-      "arn",
       "authorization_type",
       "partition",
       "region",
@@ -103,7 +100,6 @@ var (
       "access_log_settings",
       "account_id",
       "api_id",
-      "arn",
       "default_route_logging_level",
       "partition",
       "region",
@@ -116,13 +112,12 @@ var (
   {
     "table": "aws_appautoscaling_target",
     "columns": [
-      "arn",
       "region",
       "resource_id",
       "service_namespace",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "resource_id"
   },
   {
     "table": "aws_appsync_graphql_api",
@@ -140,13 +135,11 @@ var (
     "table": "aws_athena_workgroup",
     "columns": [
       "account_id",
-      "arn",
       "encryption_option",
       "name",
-      "region",
-      "title"
+      "region"
     ],
-    "id_column": "arn"
+    "id_column": "name"
   },
   {
     "table": "aws_backup_plan",
@@ -162,11 +155,9 @@ var (
   {
     "table": "aws_backup_protected_resource",
     "columns": [
-      "arn",
       "region",
       "resource_arn",
-      "resource_type",
-      "title"
+      "resource_type"
     ],
     "id_column": "resource_arn"
   },
@@ -174,12 +165,10 @@ var (
     "table": "aws_backup_recovery_point",
     "columns": [
       "account_id",
-      "arn",
       "is_encrypted",
       "lifecycle",
       "recovery_point_arn",
-      "region",
-      "title"
+      "region"
     ],
     "id_column": "recovery_point_arn"
   },
@@ -210,7 +199,6 @@ var (
     "table": "aws_cloudformation_stack",
     "columns": [
       "account_id",
-      "arn",
       "id",
       "notification_arns",
       "region",
@@ -388,14 +376,13 @@ var (
     "table": "aws_docdb_cluster_instance",
     "columns": [
       "account_id",
-      "arn",
       "db_instance_arn",
       "enabled_cloudwatch_logs_exports",
       "engine",
       "region",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "db_instance_arn"
   },
   {
     "table": "aws_docdb_cluster_snapshot",
@@ -473,7 +460,6 @@ var (
     "columns": [
       "_ctx",
       "account_id",
-      "arn",
       "autoscaling_group_arn",
       "availability_zones",
       "health_check_type",
@@ -515,13 +501,12 @@ var (
     "table": "aws_ec2_client_vpn_endpoint",
     "columns": [
       "account_id",
-      "arn",
       "client_vpn_endpoint_id",
       "connection_log_options",
       "region",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "client_vpn_endpoint_id"
   },
   {
     "table": "aws_ec2_gateway_load_balancer",
@@ -565,7 +550,6 @@ var (
     "table": "aws_ec2_launch_configuration",
     "columns": [
       "account_id",
-      "arn",
       "associate_public_ip_address",
       "launch_configuration_arn",
       "metadata_options_http_tokens",
@@ -579,7 +563,6 @@ var (
     "table": "aws_ec2_launch_template",
     "columns": [
       "account_id",
-      "arn",
       "launch_template_id",
       "region",
       "title"
@@ -589,12 +572,12 @@ var (
   {
     "table": "aws_ec2_network_interface",
     "columns": [
-      "arn",
+	  "network_interface_id",
       "groups",
       "region",
       "title"
     ],
-    "id_column": "title"
+    "id_column": "network_interface_id"
   },
   {
     "table": "aws_ec2_network_load_balancer",
@@ -616,7 +599,6 @@ var (
     "table": "aws_ec2_regional_settings",
     "columns": [
       "account_id",
-      "arn",
       "default_ebs_encryption_enabled",
       "partition",
       "region",
@@ -628,7 +610,6 @@ var (
     "table": "aws_ec2_transit_gateway",
     "columns": [
       "account_id",
-      "arn",
       "auto_accept_shared_attachments",
       "region",
       "title",
@@ -639,13 +620,12 @@ var (
   {
     "table": "aws_ecr_registry_scanning_configuration",
     "columns": [
-      "arn",
       "region",
       "registry_id",
       "scanning_configuration",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "title"
   },
   {
     "table": "aws_ecr_repository",
@@ -667,7 +647,6 @@ var (
     "table": "aws_ecs_cluster",
     "columns": [
       "account_id",
-      "arn",
       "cluster_arn",
       "region",
       "settings",
@@ -695,7 +674,6 @@ var (
     "table": "aws_ecs_task_definition",
     "columns": [
       "account_id",
-      "arn",
       "container_definitions",
       "network_mode",
       "pid_mode",
@@ -710,7 +688,6 @@ var (
     "columns": [
       "access_point_arn",
       "account_id",
-      "arn",
       "posix_user",
       "region",
       "root_directory",
@@ -804,23 +781,9 @@ var (
     "id_column": "arn"
   },
   {
-    "table": "aws_emr_block_public_access_configuration",
-    "columns": [
-      "account_id",
-      "arn",
-      "block_public_security_group_rules",
-      "partition",
-      "permitted_public_security_group_rule_ranges",
-      "region",
-      "title"
-    ],
-    "id_column": "arn"
-  },
-  {
     "table": "aws_emr_cluster",
     "columns": [
       "account_id",
-      "arn",
       "cluster_arn",
       "ec2_instance_attributes",
       "kerberos_attributes",
@@ -882,7 +845,6 @@ var (
     "columns": [
       "access_key_id",
       "account_id",
-      "arn",
       "create_date",
       "partition",
       "region",
@@ -893,34 +855,15 @@ var (
     "id_column": "access_key_id"
   },
   {
-    "table": "aws_iam_account_password_policy",
-    "columns": [
-      "account_id",
-      "arn",
-      "max_password_age",
-      "minimum_password_length",
-      "password_reuse_prevention",
-      "region",
-      "require_lowercase_characters",
-      "require_numbers",
-      "require_symbols",
-      "require_uppercase_characters",
-      "title"
-    ],
-    "id_column": ""
-  },
-  {
     "table": "aws_iam_account_summary",
     "columns": [
       "account_access_keys_present",
       "account_id",
       "account_mfa_enabled",
-      "arn",
       "partition",
-      "region",
-      "title"
+      "region"
     ],
-    "id_column": ""
+    "id_column": "account_id"
   },
   {
     "table": "aws_iam_credential_report",
@@ -932,18 +875,16 @@ var (
       "access_key_2_last_rotated",
       "access_key_2_last_used_date",
       "account_id",
-      "arn",
       "mfa_active",
       "password_enabled",
       "password_last_changed",
       "password_last_used",
       "region",
-      "title",
       "user_arn",
       "user_creation_time",
       "user_name"
     ],
-    "id_column": "arn"
+    "id_column": "user_arn"
   },
   {
     "table": "aws_iam_group",
@@ -1022,7 +963,6 @@ var (
   {
     "table": "aws_iam_virtual_mfa_device",
     "columns": [
-      "arn",
       "region",
       "serial_number",
       "title"
@@ -1033,7 +973,6 @@ var (
     "table": "aws_kinesis_stream",
     "columns": [
       "account_id",
-      "arn",
       "encryption_type",
       "region",
       "stream_arn",
@@ -1116,14 +1055,13 @@ var (
     "table": "aws_neptune_db_cluster_snapshot",
     "columns": [
       "account_id",
-      "arn",
       "db_cluster_snapshot_arn",
       "db_cluster_snapshot_attributes",
       "region",
       "storage_encrypted",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "db_cluster_snapshot_arn"
   },
   {
     "table": "aws_networkfirewall_firewall",
@@ -1296,34 +1234,31 @@ var (
     "table": "aws_region",
     "columns": [
       "account_id",
-      "arn",
       "name",
       "opt_in_status",
       "partition",
       "region",
       "title"
     ],
-    "id_column": "title"
+    "id_column": "region"
   },
   {
     "table": "aws_route53_zone",
     "columns": [
       "account_id",
-      "arn",
       "id",
       "private_zone",
       "query_logging_configs",
       "region",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "title"
   },
   {
     "table": "aws_s3_access_point",
     "columns": [
       "access_point_arn",
       "account_id",
-      "arn",
       "block_public_acls",
       "block_public_policy",
       "ignore_public_acls",
@@ -1332,13 +1267,12 @@ var (
       "restrict_public_buckets",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "title"
   },
   {
     "table": "aws_s3_account_settings",
     "columns": [
       "account_id",
-      "arn",
       "block_public_acls",
       "block_public_policy",
       "ignore_public_acls",
@@ -1425,7 +1359,6 @@ var (
     "table": "aws_securityhub_hub",
     "columns": [
       "account_id",
-      "arn",
       "hub_arn",
       "region",
       "title"
@@ -1448,7 +1381,6 @@ var (
     "columns": [
       "account_id",
       "application_failure_feedback_role_arn",
-      "arn",
       "firehose_failure_feedback_role_arn",
       "http_failure_feedback_role_arn",
       "kms_master_key_id",
@@ -1464,7 +1396,6 @@ var (
     "table": "aws_sqs_queue",
     "columns": [
       "account_id",
-      "arn",
       "kms_master_key_id",
       "queue_arn",
       "region",
@@ -1500,7 +1431,6 @@ var (
     "table": "aws_ssm_managed_instance_compliance",
     "columns": [
       "account_id",
-      "arn",
       "compliance_type",
       "id",
       "region",
@@ -1508,7 +1438,7 @@ var (
       "status",
       "title"
     ],
-    "id_column": "arn"
+    "id_column": "title"
   },
   {
     "table": "aws_vpc",
@@ -1538,29 +1468,27 @@ var (
   {
     "table": "aws_vpc_endpoint",
     "columns": [
-      "arn",
       "region",
       "service_name",
       "title",
       "vpc_id"
     ],
-    "id_column": "vpc_id"
+    "id_column": "title"
   },
   {
     "table": "aws_vpc_flow_log",
     "columns": [
-      "arn",
+	  "flow_log_id",
       "region",
       "resource_id",
       "title"
     ],
-    "id_column": "resource_id"
+    "id_column": "flow_log_id"
   },
   {
     "table": "aws_vpc_internet_gateway",
     "columns": [
       "account_id",
-      "arn",
       "attachments",
       "partition",
       "region",
@@ -1587,7 +1515,6 @@ var (
     "table": "aws_vpc_route_table",
     "columns": [
       "account_id",
-      "arn",
       "region",
       "route_table_id",
       "routes",
@@ -1612,7 +1539,6 @@ var (
   {
     "table": "aws_vpc_security_group_rule",
     "columns": [
-      "arn",
       "cidr_ipv4",
       "cidr_ipv6",
       "from_port",
@@ -1632,7 +1558,6 @@ var (
     "table": "aws_vpc_subnet",
     "columns": [
       "account_id",
-      "arn",
       "map_public_ip_on_launch",
       "region",
       "subnet_id",
@@ -1654,7 +1579,6 @@ var (
     "table": "aws_waf_rule",
     "columns": [
       "account_id",
-      "arn",
       "predicates",
       "region",
       "rule_id",

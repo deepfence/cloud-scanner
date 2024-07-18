@@ -1,7 +1,7 @@
 package query_resource
 
 var (
-	azureCloudTablesJson = `[
+	AzureCloudTablesJson = `[
   {
     "table": "azure_api_management",
     "columns": [
@@ -113,7 +113,6 @@ var (
       "id",
       "is_encrypted",
       "name",
-      "region",
       "resource_group",
       "title"
     ],
@@ -327,7 +326,6 @@ var (
       "id",
       "logs",
       "name",
-      "region",
       "resource_group",
       "subscription_id"
     ],
@@ -566,7 +564,6 @@ var (
     "columns": [
       "id",
       "name",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -759,7 +756,6 @@ var (
       "id",
       "name",
       "principal_id",
-      "region",
       "role_definition_id"
     ],
     "id_column": "id"
@@ -771,7 +767,6 @@ var (
       "id",
       "name",
       "permissions",
-      "region",
       "role_name",
       "role_type",
       "subscription_id"
@@ -799,7 +794,6 @@ var (
       "auto_provision",
       "id",
       "name",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -812,7 +806,6 @@ var (
       "email",
       "id",
       "name",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -822,7 +815,6 @@ var (
     "columns": [
       "id",
       "name",
-      "region",
       "subscription_id",
       "virtual_machines"
     ],
@@ -834,7 +826,6 @@ var (
       "enabled",
       "id",
       "name",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -845,7 +836,6 @@ var (
       "id",
       "name",
       "pricing_tier",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -979,7 +969,6 @@ var (
       "id",
       "name",
       "public_access",
-      "region",
       "resource_group",
       "subscription_id",
       "type"
@@ -1017,7 +1006,6 @@ var (
       "id",
       "name",
       "network_security_group_id",
-      "region",
       "resource_group",
       "service_endpoints",
       "subscription_id"
@@ -1030,8 +1018,6 @@ var (
       "_ctx",
       "display_name",
       "id",
-      "name",
-      "region",
       "subscription_id"
     ],
     "id_column": "id"
@@ -1063,7 +1049,6 @@ var (
       "_ctx",
       "id",
       "name",
-      "region",
       "subscription_id",
       "tenant_id",
       "title"
@@ -1099,15 +1084,16 @@ var (
       "title"
     ],
     "id_column": "id"
-  },
+  }
+]`
+
+	AzureADCloudTablesJson = `[
   {
     "table": "azuread_authorization_policy",
     "columns": [
       "default_user_role_permissions",
       "display_name",
-      "id",
-      "name",
-      "region"
+      "id"
     ],
     "id_column": "id"
   },
@@ -1116,9 +1102,7 @@ var (
     "columns": [
       "built_in_controls",
       "display_name",
-      "id",
-      "name",
-      "region"
+      "id"
     ],
     "id_column": "id"
   },
@@ -1127,9 +1111,7 @@ var (
     "columns": [
       "display_name",
       "id",
-      "member_ids",
-      "name",
-      "region"
+      "member_ids"
     ],
     "id_column": "id"
   },
@@ -1140,8 +1122,6 @@ var (
       "created_date_time",
       "display_name",
       "id",
-      "name",
-      "region",
       "tenant_id",
       "user_principal_name",
       "user_type"
