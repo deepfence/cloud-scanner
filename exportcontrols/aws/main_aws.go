@@ -196,7 +196,7 @@ func (c *Control) SetCategoryHierarchyShort() {
 
 	case strings.Contains(bmType, "HIPAA Final Omnibus Security Rule 2013"):
 		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")
-		c.CategoryHierarchyShort = fmt.Sprintf("HIPPA - %s", controlNum[0])
+		c.CategoryHierarchyShort = fmt.Sprintf("HIPAA - %s", controlNum[0])
 
 	case strings.Contains(bmType, "SOC 2"):
 		controlNum := strings.Split(c.CategoryHierarchy[len(c.CategoryHierarchy)-1], " ")

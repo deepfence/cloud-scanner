@@ -176,7 +176,7 @@ func (c *Control) SetCategoryHierarchyShort() {
 		c.CategoryHierarchyShort = fmt.Sprintf("PCI DSS v3.2.1 - %s", controlNum[len(controlNum)-1])
 
 	case strings.Contains(bmType, "HIPAA HITRUST 9.2"):
-		c.CategoryHierarchyShort = fmt.Sprintf("HIPPA 9.2 - %s", c.CategoryHierarchy[1])
+		c.CategoryHierarchyShort = fmt.Sprintf("HIPAA 9.2 - %s", c.CategoryHierarchy[1])
 
 	default:
 		c.CategoryHierarchyShort = ""
