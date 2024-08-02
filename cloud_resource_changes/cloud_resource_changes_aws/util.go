@@ -16,6 +16,10 @@ func GetSupportedAwsRegions() []string {
 		"us-east-2", "us-gov-east-1", "us-gov-west-1", "us-west-1", "us-west-2"}
 }
 
+type SteampipeQueryResponse struct {
+	Rows []CloudTrailTrail `json:"rows"`
+}
+
 func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 	var query string
 	var isOrganizationTrail string
@@ -35,12 +39,14 @@ func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 		log.Error().Msgf(string(stdOut))
 		return trailList
 	}
-	if err := json.Unmarshal(stdOut, &trailList); err != nil {
+	var steampipeQueryResponse SteampipeQueryResponse
+	if err := json.Unmarshal(stdOut, &steampipeQueryResponse); err != nil {
 		log.Error().Msgf("Error unmarshaling cloudtrail details: %v \n Steampipe Output: %s",
 			err, string(stdOut))
 		return trailList
 	}
 
+	trailList = steampipeQueryResponse.Rows
 	selectedARNs := make(map[string]bool)
 	var selectedTrailList []CloudTrailTrail
 
