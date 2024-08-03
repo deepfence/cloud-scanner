@@ -574,7 +574,7 @@ func (c *ComplianceScanService) loopRegister() {
 
 func (c *ComplianceScanService) executeScans(scan ctl.CloudComplianceScanDetails) interface{} {
 	log.Debug().Msgf("s.RemainingScansMap: %+v", &c.RemainingScansMap)
-	log.Info().Msgf("executeScans called for: %s", scan)
+	log.Info().Msgf("executeScans called for account %s, scan id: %s", scan.AccountId, scan.ScanId)
 
 	if _, ok := c.runningScanMap[scan.AccountId]; !ok {
 		log.Info().Msgf("Running scan with id: %s", scan.ScanId)
