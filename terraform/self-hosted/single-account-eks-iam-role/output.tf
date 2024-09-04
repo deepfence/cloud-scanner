@@ -9,6 +9,6 @@ output "service_account_name" {
 }
 
 output "cloud_scanner_role_arn" {
-  value = aws_iam_role.cloud_scanner.arn
+  value = aws_iam_role.deepfence_cloud_scanner.arn
   description = "aws iam role arn for deepfence-cloud-scanner"
 }
