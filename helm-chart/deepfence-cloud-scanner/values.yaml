@@ -51,8 +51,9 @@ logLevel: info
 cloudAuditLogIDs: ""
 
 # Only applicable in AWS
-# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment"
-awsCredentialSource: "Ec2InstanceMetadata"
+# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment" "ServiceAccount"
+# service account needs special handling
+awsCredentialSource: "ServiceAccount"
 
 imagePullSecrets: []
 nameOverride: ""
