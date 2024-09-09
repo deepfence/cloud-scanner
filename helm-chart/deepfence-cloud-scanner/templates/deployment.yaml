@@ -61,7 +61,7 @@ spec:
           - name: ROLE_NAME
             value: "{{ .Values.cloudAccount.roleName }}"
           - name: AWS_CREDENTIAL_SOURCE
-            value: "Ec2InstanceMetadata"
+            value: "{{ .Values.awsCredentialSource }}"
           - name: CLOUD_AUDIT_LOG_IDS
             value: "{{ .Values.cloudAuditLogIDs }}"
           - name: HTTP_SERVER_REQUIRED

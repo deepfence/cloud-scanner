@@ -50,6 +50,10 @@ logLevel: info
 # If empty, a trail with management events will be automatically chosen if available.
 cloudAuditLogIDs: ""
 
+# Only applicable in AWS
+# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment"
+awsCredentialSource: "Ec2InstanceMetadata"
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
