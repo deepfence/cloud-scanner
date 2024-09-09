@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  Deepfence Cloud Scanner IAM role for Organization Deployment
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Configuration
+      Parameters:
+      - TaskIAMRole
+      - ParentStackName
+      - CloudScannerAccountId
+    ParameterLabels:
+      TaskIAMRole:
+        default: If SecurityAudit role is chosen, cloud scanner may not find configuration issues in some of the AWS resources like WAF. Also updates will happen only once every day.
+      ParentStackName:
+        default: Parent Stack Name
+      CloudScannerAccountId:
+        default: aws account where cloud scanner is deployed
+Parameters:
+  TaskIAMRole:
+    Type: String
+    Description: Task Role
+    Default: arn:aws:iam::aws:policy/SecurityAudit
+    AllowedValues:
+    - arn:aws:iam::aws:policy/SecurityAudit
+    - arn:aws:iam::aws:policy/ReadOnlyAccess
+  ParentStackName:
+    Type: String
+  CloudScannerAccountId:
+    Type: String
+Resources:
+  ReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Ref ParentStackName
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": "arn:aws:iam::${CloudScannerAccountId}:role/${ParentStackName}"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - !Ref TaskIAMRole
+      Description: Provide AssumeRole permission to Deepfence Managed Cloud Scanner
