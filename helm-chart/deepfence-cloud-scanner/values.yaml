@@ -8,7 +8,7 @@ image:
   # ThreatStryker
   # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
-  tag: "2.3.0-dev"
+  tag: "2.3.1"
 
 # Deepfence management console url and port
 # Format: deepfence.customer.com or 123.123.123.123
@@ -49,6 +49,11 @@ logLevel: info
 # Optional: To refresh the cloud resources every hour, provide CloudTrail Trail ARNs (Management events with write-only or read-write).
 # If empty, a trail with management events will be automatically chosen if available.
 cloudAuditLogIDs: ""
+
+# Only applicable in AWS
+# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment", "ServiceAccount"
+# service account needs special handling
+awsCredentialSource: "ServiceAccount"
 
 imagePullSecrets: []
 nameOverride: ""
