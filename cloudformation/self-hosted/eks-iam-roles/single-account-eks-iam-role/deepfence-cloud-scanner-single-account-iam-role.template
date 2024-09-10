@@ -1,0 +1,58 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deepfence Cloud Scanner Single account EKS IRSA role'
+Parameters:
+  EKSClusterName:
+    Type: String
+  EKSClusterOIDCURL:
+    Type: String
+    Description: The OpenID Connect URL without protocol (the "https://" prefix)
+  K8sNamespace:
+    Type: String
+    Default: deepfence
+  K8sServiceAccountName:
+    Type: String
+    Default: deepfence-cloud-scanner
+  TaskIAMRole:
+    Type: String
+    Description: Task Role
+    Default: arn:aws:iam::aws:policy/SecurityAudit
+    AllowedValues:
+    - arn:aws:iam::aws:policy/SecurityAudit
+    - arn:aws:iam::aws:policy/ReadOnlyAccess
+Resources:
+  ReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      RoleName: !Sub "${AWS::StackName}-cloud-scanner-role"
+      ManagedPolicyArns:
+        - !Ref TaskIAMRole
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSClusterOIDCURL}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${EKSClusterOIDCURL}:sub": "system:serviceaccount:${K8sNamespace}:${K8sServiceAccountName}",
+                  "${EKSClusterOIDCURL}:aud": "sts.amazonaws.com"
+                }
+              }
+            }
+          ]
+        }
+Outputs:
+  EKSClusterName:
+    Value: !Ref EKSClusterName
+  K8sNamespace:
+    Value: !Ref K8sNamespace
+  K8sServiceAccountName:
+    Value: !Ref K8sServiceAccountName
+  ReadOnlyRoleIAMRoleARN:
+    Value: !GetAtt ReadOnlyRole.Arn
