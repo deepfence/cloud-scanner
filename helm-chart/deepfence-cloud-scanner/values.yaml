@@ -1,7 +1,3 @@
-# Default values for deepfence-cloud-scanner.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
 image:
   # ThreatMapper
   repository: quay.io/deepfenceio/cloud_scanner_ce
@@ -27,21 +23,31 @@ cloudAccount:
   accountID: ""
   # Account name (Optional, for easy identification. Not required in organization deployment.)
   accountName: ""
+
+  # aws / gcp / azure
   cloudProvider: ""
   region: ""
-  # Is this organization deployment or single account deployment?
-  isOrganizationDeployment: false
-  organizationAccountID: ""
-  # Optional: AWS/GCP/Azure account ID where the helm chart is deployed, in case it is different from monitored account ID
-  deployedAccountID: ""
-  # Role name. The name should be same across all accounts in the Organization deployment.
-  # Role ARN example: arn:aws:iam::123456789012:role/deepfence-managed-cloud-scanner-role
-  # Role name in this case is deepfence-managed-cloud-scanner-role
-  roleName: ""
-  # Optional: (Applicable only in AWS)
+  
+  # Applicable only in AWS
   # Policy set for Cloud Scanner in CloudFormation / terraform
   # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
   cloudScannerPolicy: ""
+
+  # For Organization deployment:
+
+  # Is this organization deployment or single account deployment?
+  isOrganizationDeployment: false
+
+  # Organization root account ID
+  organizationAccountID: ""
+
+  # Optional: AWS/GCP/Azure account ID where the helm chart is deployed, in case it is different from monitored account ID
+  deployedAccountID: ""
+
+  # Role name. The name should be same across all accounts in the Organization deployment.
+  # Role ARN example: arn:aws:iam::123456789012:role/deepfence-cloud-scanner-role
+  # Role name in this case is deepfence-cloud-scanner-role
+  roleName: ""
 
 # Log level: error/warn/info/debug/trace
 logLevel: info
