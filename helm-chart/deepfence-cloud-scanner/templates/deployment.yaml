@@ -45,11 +45,11 @@ spec:
                 name: {{ include "deepfence-cloud-scanner.fullname" . }}-key
                 key: "deepfence-key"
           - name: CLOUD_PROVIDER
-            value: "{{ .Values.cloudAccount.cloudProvider }}"
+            value: "{{ required "cloudAccount.cloudProvider is required" .Values.cloudAccount.cloudProvider }}"
           - name: CLOUD_REGION
-            value: "{{ .Values.cloudAccount.region }}"
+            value: "{{ required "cloudAccount.region is required" .Values.cloudAccount.region }}"
           - name: CLOUD_ACCOUNT_ID
-            value: "{{ .Values.cloudAccount.accountID }}"
+            value: "{{ required "cloudAccount.accountID is required" .Values.cloudAccount.accountID }}"
           - name: DEPLOYED_ACCOUNT_ID
             value: "{{ .Values.cloudAccount.deployedAccountID }}"
           - name: CLOUD_ACCOUNT_NAME
