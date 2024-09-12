@@ -8,7 +8,7 @@ image:
   # ThreatStryker
   # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
-  tag: "2.3.0"
+  tag: "2.3.1"
 
 # Deepfence management console url and port
 # Format: deepfence.customer.com or 123.123.123.123
@@ -51,7 +51,7 @@ logLevel: info
 cloudAuditLogIDs: ""
 
 # Only applicable in AWS
-# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment" "ServiceAccount"
+# Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment", "ServiceAccount"
 # service account needs special handling
 awsCredentialSource: "ServiceAccount"
 
