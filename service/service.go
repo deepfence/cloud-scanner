@@ -466,11 +466,13 @@ func processAwsCredentials(c *ComplianceScanService) {
 		} else {
 			if accId == c.config.DeployedAccountID {
 				steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
-			} else if c.config.AWSCredentialSource == "ServiceAccount" {
-				awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\nsource_profile = default\n"
-				steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 			} else {
-				awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\ncredential_source = " + c.config.AWSCredentialSource + "\n"
+				awsCredentialsFile += "\n[profile_" + accId + "]\nrole_arn = arn:aws:iam::" + accId + ":role/" + c.config.RoleName + "\n"
+				if c.config.AWSCredentialSource == "ServiceAccount" {
+					awsCredentialsFile += "source_profile = default\n"
+				} else {
+					awsCredentialsFile += "credential_source = " + c.config.AWSCredentialSource + "\n"
+				}
 				steampipeConfigFile += "\nconnection \"aws_" + accId + "\" {\n  plugin = \"" + util.SteampipeAWSPluginVersion + "\"\n  profile = \"profile_" + accId + "\"\n  " + regionString + "  max_error_retry_attempts = 10\n  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 			}
 		}

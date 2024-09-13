@@ -119,7 +119,7 @@ func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 		}
 	}
 	if len(selectedTrailList) == 0 {
-		log.Error().Msgf("Cloudtrail not configured")
+		log.Warn().Msgf("Cloudtrail not configured")
 		return trailList
 	}
 	return []CloudTrailTrail{selectedTrailList[0]}
