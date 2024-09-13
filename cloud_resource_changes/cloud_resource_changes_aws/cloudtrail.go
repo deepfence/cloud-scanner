@@ -37,30 +37,27 @@ type CloudResourceChangesAWS struct {
 }
 
 func NewCloudResourcesChangesAWS(config util.Config) (*CloudResourceChangesAWS, error) {
-	if config.CloudScannerPolicy != TaskRoleReadOnly {
-		log.Warn().Msg("Task role is not set to arn:aws:iam::aws:policy/ReadOnlyAccess. Disabling CloudTrail based updates of cloud resources.")
-		return &CloudResourceChangesAWS{
-			config:           config,
-			cloudTrailTrails: []CloudTrailTrail{},
-		}, nil
-	}
 	return &CloudResourceChangesAWS{
 		config:           config,
 		cloudTrailTrails: make([]CloudTrailTrail, 0),
 	}, nil
 }
 
-func (c *CloudResourceChangesAWS) Initialize() error {
+func (c *CloudResourceChangesAWS) Initialize() (bool, error) {
+	if c.config.CloudScannerPolicy != TaskRoleReadOnly {
+		log.Warn().Msg("Task role is not set to arn:aws:iam::aws:policy/ReadOnlyAccess. Disabling CloudTrail based updates of cloud resources.")
+		return false, nil
+	}
 	trails := getCloudTrailTrails(c.config)
 	if len(trails) == 0 {
-		return ErrNoCloudTrailsFound
+		return false, ErrNoCloudTrailsFound
 	}
 	c.cloudTrailTrails = trails
 	log.Info().Msgf("Following CloudTrail Trails are monitored for events every 30 minutes to update the cloud resources in the management console")
 	for i, trail := range c.cloudTrailTrails {
 		log.Info().Msgf("%d. %s (Region: %s)", i+1, trail.Arn, trail.Region)
 	}
-	return nil
+	return true, nil
 }
 
 func (c *CloudResourceChangesAWS) GetResourceTypesToRefresh() (map[string][]string, error) {

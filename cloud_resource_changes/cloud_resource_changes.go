@@ -8,7 +8,7 @@ import (
 )
 
 type CloudResourceChanges interface {
-	Initialize() error
+	Initialize() (bool, error)
 	GetResourceTypesToRefresh() (map[string][]string, error)
 }
 

@@ -4,7 +4,7 @@ image:
   # ThreatStryker
   # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
-  tag: "2.3.1"
+  tag: 2.3.1
 
 # Deepfence management console url and port
 # Format: deepfence.customer.com or 123.123.123.123
@@ -19,7 +19,7 @@ deepfenceKey:
   key: ""
 
 cloudAccount:
-  # AWS/GCP/Azure account ID to monitor
+  # AWS account ID / GCP project ID / Azure subscription ID to monitor
   accountID: ""
   # Account name (Optional, for easy identification. Not required in organization deployment.)
   accountName: ""
@@ -32,6 +32,10 @@ cloudAccount:
   # Policy set for Cloud Scanner in CloudFormation / terraform
   # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
   cloudScannerPolicy: ""
+  
+  # Optional: AWS account ID / GCP project ID / Azure subscription ID where the helm chart is deployed,
+  # in case it is different from cloudAccount.accountID
+  deployedAccountID: ""
 
   # For Organization deployment:
 
@@ -39,11 +43,11 @@ cloudAccount:
   isOrganizationDeployment: false
 
   # Organization root account ID
+  # Should be same as cloudAccount.accountID, in case of AWS/GCP
+  # Should be tenant id, in case of Azure
   organizationAccountID: ""
 
-  # Optional: AWS/GCP/Azure account ID where the helm chart is deployed, in case it is different from monitored account ID
-  deployedAccountID: ""
-
+  # Applicable only in AWS
   # Role name. The name should be same across all accounts in the Organization deployment.
   # Role ARN example: arn:aws:iam::123456789012:role/deepfence-cloud-scanner-role
   # Role name in this case is deepfence-cloud-scanner-role
@@ -61,20 +65,24 @@ cloudAuditLogIDs: ""
 # service account needs special handling
 awsCredentialSource: "ServiceAccount"
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
+
   # Annotations to add to the service account
   annotations: {}
+  # annotations:
+  #   "eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/deepfence-cloud-scanner"
+
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
 
 podAnnotations: {}
 podLabels: {}
