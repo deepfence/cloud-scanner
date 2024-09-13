@@ -14,8 +14,8 @@ func NewCloudResourcesChangesGCP(config util.Config) (*CloudResourceChangesGCP, 
 	}, nil
 }
 
-func (c *CloudResourceChangesGCP) Initialize() error {
-	return nil
+func (c *CloudResourceChangesGCP) Initialize() (bool, error) {
+	return false, nil
 }
 
 func (c *CloudResourceChangesGCP) GetResourceTypesToRefresh() (map[string][]string, error) {

@@ -14,8 +14,8 @@ func NewCloudResourcesChangesAzure(config util.Config) (*CloudResourceChangesAzu
 	}, nil
 }
 
-func (c *CloudResourceChangesAzure) Initialize() error {
-	return nil
+func (c *CloudResourceChangesAzure) Initialize() (bool, error) {
+	return false, nil
 }
 
 func (c *CloudResourceChangesAzure) GetResourceTypesToRefresh() (map[string][]string, error) {

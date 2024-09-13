@@ -36,13 +36,15 @@ func NewResourceRefreshService(config util.Config) (*ResourceRefreshService, err
 
 func (r *ResourceRefreshService) Initialize() {
 	log.Info().Msgf("CloudResourceChanges Initialization started")
-	err := r.CloudResourceChanges.Initialize()
+	ok, err := r.CloudResourceChanges.Initialize()
 	if err != nil {
 		log.Warn().Msgf("%+v", err)
 	}
 	log.Info().Msgf("CloudResourceChanges Initialization completed")
 
-	go r.refreshResourcesFromTrailPeriodically()
+	if ok {
+		go r.refreshResourcesFromTrailPeriodically()
+	}
 }
 
 func (r *ResourceRefreshService) Lock() {

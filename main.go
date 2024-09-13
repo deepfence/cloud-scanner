@@ -88,6 +88,10 @@ func main() {
 		}
 	}
 
+	if config.DeployedAccountID == "" {
+		config.DeployedAccountID = config.AccountID
+	}
+
 	switch config.CloudProvider {
 	case util.CloudProviderAWS:
 		if config.AWSCredentialSource != "EcsContainer" &&
