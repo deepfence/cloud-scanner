@@ -90,8 +90,17 @@ Resources:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
       TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
+  InstanceProfile:
+    DependsOn: ReadOnlyRole
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+        - !Ref 'AWS::StackName'
 Outputs:
   ReadOnlyRoleARN:
     Value: !GetAtt ReadOnlyRole.Arn
   ReadOnlyRoleName:
-    Value: !GetAtt ReadOnlyRole.Name
+    Value: !Ref 'AWS::StackName'
+  InstanceProfileARN:
+    Value: !GetAtt InstanceProfile.Arn

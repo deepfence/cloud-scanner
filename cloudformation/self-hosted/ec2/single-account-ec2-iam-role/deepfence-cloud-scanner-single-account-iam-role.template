@@ -28,8 +28,17 @@ Resources:
             }
           ]
         }
+  InstanceProfile:
+    DependsOn: ReadOnlyRole
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+        - !Ref 'AWS::StackName'
 Outputs:
   ReadOnlyRoleARN:
     Value: !GetAtt ReadOnlyRole.Arn
   ReadOnlyRoleName:
-    Value: !GetAtt ReadOnlyRole.Name
+    Value: !Sub "${AWS::StackName}"
+  InstanceProfileARN:
+    Value: !GetAtt InstanceProfile.Arn
