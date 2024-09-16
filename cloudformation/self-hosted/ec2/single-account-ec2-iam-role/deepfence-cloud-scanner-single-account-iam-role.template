@@ -1,0 +1,44 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deepfence Cloud Scanner Single account role'
+Parameters:
+  TaskIAMRole:
+    Type: String
+    Description: Task Role
+    Default: arn:aws:iam::aws:policy/SecurityAudit
+    AllowedValues:
+    - arn:aws:iam::aws:policy/SecurityAudit
+    - arn:aws:iam::aws:policy/ReadOnlyAccess
+Resources:
+  ReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      RoleName: !Sub "${AWS::StackName}"
+      ManagedPolicyArns:
+        - !Ref TaskIAMRole
+      AssumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {"Service": "ec2.amazonaws.com"},
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+  InstanceProfile:
+    DependsOn: ReadOnlyRole
+    Type: "AWS::IAM::InstanceProfile"
+    Properties: 
+      Path: "/"
+      Roles: 
+        - !Ref 'AWS::StackName'
+Outputs:
+  ReadOnlyRoleARN:
+    Value: !GetAtt ReadOnlyRole.Arn
+  ReadOnlyRoleName:
+    Value: !Sub "${AWS::StackName}"
+  InstanceProfileARN:
+    Value: !GetAtt InstanceProfile.Arn

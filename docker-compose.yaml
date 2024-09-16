@@ -1,0 +1,59 @@
+services:
+  cloud-scanner:
+    container_name: deepfence-cloud-scanner
+    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner:${DF_IMG_TAG:-2.3.1}
+    restart: unless-stopped
+    environment:
+      # Deepfence management console url and port
+      # Format: deepfence.customer.com or 123.123.123.123
+      MGMT_CONSOLE_URL: ""
+      MGMT_CONSOLE_PORT: 443
+      # Get Deepfence api key from UI -> Settings -> User Management
+      DEEPFENCE_KEY: ""
+      # aws / gcp / azure
+      CLOUD_PROVIDER: ""
+      CLOUD_REGION: ""
+      # AWS account ID / GCP project ID / Azure subscription ID to monitor
+      CLOUD_ACCOUNT_ID: ""
+      # Optional: AWS account ID / GCP project ID / Azure subscription ID where the helm chart is deployed,
+      # in case it is different from cloudAccount.accountID
+      DEPLOYED_ACCOUNT_ID: ""
+      # Account name (Optional, for easy identification. Not required in organization deployment.)
+      CLOUD_ACCOUNT_NAME: ""
+      
+      # For Organization deployment:
+      
+      # Is this organization deployment or single account deployment?
+      ORGANIZATION_DEPLOYMENT: false
+      # Organization root account ID
+      # Should be same as cloudAccount.accountID, in case of AWS/GCP
+      # Should be tenant id, in case of Azure
+      CLOUD_ORGANIZATION_ID: ""
+      # Applicable only in AWS
+      # Role name. The name should be same across all accounts in the Organization deployment.
+      # Role ARN example: arn:aws:iam::123456789012:role/deepfence-cloud-scanner-role
+      # Role name in this case is deepfence-cloud-scanner-role
+      ROLE_NAME: ""
+      
+      # Only applicable in AWS
+      # Must be one of "Ec2InstanceMetadata", "EcsContainer", "Environment", "ServiceAccount"
+      # service account needs special handling
+      AWS_CREDENTIAL_SOURCE: "Ec2InstanceMetadata"
+      
+      # Optional: To refresh the cloud resources every hour, provide CloudTrail Trail ARNs (Management events with write-only or read-write).
+      # If empty, a trail with management events will be automatically chosen if available.
+      CLOUD_AUDIT_LOG_IDS: ""
+      HTTP_SERVER_REQUIRED: "false"
+      SUCCESS_SIGNAL_URL: ""
+
+      DF_LOG_LEVEL: info
+      SCAN_INACTIVE_THRESHOLD: "21600"
+      
+      # Applicable only in AWS
+      # Policy set for Cloud Scanner in CloudFormation / terraform
+      # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
+      CLOUD_SCANNER_POLICY: ""
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
