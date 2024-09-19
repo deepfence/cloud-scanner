@@ -1,6 +1,6 @@
 PWD=$(shell pwd)
-IMAGE_REPOSITORY?=quay.io/deepfenceio
-DF_IMG_TAG?=latest
+IMAGE_REPOSITORY?=tektite
+DF_IMG_TAG?=2.3-ozone
 
 .PHONY: bootstrap steampipe-docker steampipe-docker-push
 
