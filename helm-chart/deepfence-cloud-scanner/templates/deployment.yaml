@@ -37,6 +37,8 @@ spec:
           env:
           - name: MGMT_CONSOLE_URL
             value: "{{ required "managementConsoleUrl is required" .Values.managementConsoleUrl }}"
+          - name: DEPLOYMENT_MODE
+            value: "kubernetes"
           - name: MGMT_CONSOLE_PORT
             value: "{{ required "managementConsolePort is required" .Values.managementConsolePort }}"
           - name: DEEPFENCE_KEY

@@ -45,6 +45,11 @@ const (
 //	}
 //)
 
+const (
+	DeploymentModeKubernetes = "kubernetes"
+	DeploymentModeDocker     = "docker"
+)
+
 type Config struct {
 	ManagementConsoleUrl     string   `envconfig:"MGMT_CONSOLE_URL" validate:"required" json:"management_console_url"`
 	ManagementConsolePort    string   `envconfig:"MGMT_CONSOLE_PORT" default:"443" json:"management_console_port"`
@@ -64,10 +69,12 @@ type Config struct {
 	LogLevel                 string   `envconfig:"DF_LOG_LEVEL" default:"info" json:"log_level"`
 	ScanInactiveThreshold    int      `envconfig:"SCAN_INACTIVE_THRESHOLD" default:"21600" json:"scan_inactive_threshold"`
 	CloudScannerPolicy       string   `envconfig:"CLOUD_SCANNER_POLICY" json:"cloud_scanner_policy"`
+	DeploymentMode           string   `envconfig:"DEPLOYMENT_MODE" json:"deployment_mode"`
 
-	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
-	NodeID        string                      `ignored:"true" json:"-"`
-	Version       string                      `ignored:"true" json:"version"`
+	CloudMetadata                cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
+	NodeID                       string                      `ignored:"true" json:"-"`
+	Version                      string                      `ignored:"true" json:"version"`
+	DatabasePersistenceSupported bool                        `ignored:"true" json:"database_persistence_supported"`
 }
 
 type MonitoredAccount struct {
@@ -157,6 +164,12 @@ type AccountsToRefresh struct {
 	AccountID     string
 	NodeID        string
 	ResourceTypes []string
+}
+
+type RefreshMetadata struct {
+	InProgressResourceType string `json:"in_progress"`
+	CompletedResourceTypes int    `json:"completed"`
+	TotalResourceTypes     int    `json:"total"`
 }
 
 var (

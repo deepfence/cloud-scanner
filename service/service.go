@@ -367,7 +367,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	util.RestartSteampipeService()
 
 	// Registration should be done first before starting other services
-	err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+	err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts(), true)
 	if err != nil {
 		log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
 
@@ -380,7 +380,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 			for {
 				select {
 				case <-refreshTicker.C:
-					registerErr = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+					registerErr = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts(), true)
 					if registerErr != nil {
 						log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
 					} else {
@@ -555,7 +555,7 @@ func (c *ComplianceScanService) refreshOrganizationAccountIDs() {
 			}
 
 			if len(newAccounts) > 0 {
-				err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+				err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts(), false)
 				if err != nil {
 					log.Error().Msgf("Error in registering cloud account: %s", err.Error())
 				}
@@ -573,7 +573,7 @@ func (c *ComplianceScanService) loopRegister() {
 	for {
 		select {
 		case <-ticker.C:
-			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts())
+			err = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts(), false)
 			if err != nil {
 				log.Error().Msgf("Error in registering cloud account: %s", err.Error())
 			}

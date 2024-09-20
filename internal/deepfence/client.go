@@ -46,7 +46,51 @@ func NewClient(config util.Config) (*Client, error) {
 	return &Client{client: client, config: config}, nil
 }
 
-func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount) error {
+func (c *Client) GetCloudAccountsRefreshStatus() (map[string]util.RefreshMetadata, error) {
+	req := c.client.Client().SearchAPI.SearchCloudAccounts(context.Background())
+
+	searchFilter := map[string][]interface{}{"cloud_provider": {c.config.CloudProvider}}
+	if c.config.IsOrganizationDeployment {
+		searchFilter["organization_id"] = []interface{}{c.config.OrganizationID}
+	} else {
+		searchFilter["node_name"] = []interface{}{c.config.AccountID}
+	}
+	searchRequest := client.SearchSearchNodeReq{
+		NodeFilter: client.SearchSearchFilter{
+			Filters: client.ReportersFieldsFilters{
+				ContainsFilter: client.ReportersContainsFilter{FilterIn: searchFilter},
+			},
+		},
+		Window: client.ModelFetchWindow{
+			Offset: 0,
+			Size:   1000,
+		},
+	}
+	req = req.SearchSearchNodeReq(searchRequest)
+	log.Debug().Msgf("Fetch cloud accounts")
+
+	accountsRefreshStatus := make(map[string]util.RefreshMetadata)
+	cloudAccounts, _, err := c.client.Client().SearchAPI.SearchCloudAccountsExecute(req)
+	if err != nil {
+		log.Error().Msgf("Request errored on fetching cloud accounts: %s", err.Error())
+		return accountsRefreshStatus, err
+	}
+	for _, cloudAccount := range cloudAccounts {
+		refreshMetadataStr := cloudAccount.GetRefreshMetadata()
+		var refreshMetadata util.RefreshMetadata
+		if refreshMetadataStr != "" {
+			err = json.Unmarshal([]byte(refreshMetadataStr), &refreshMetadata)
+			if err != nil {
+				log.Warn().Msg(err.Error())
+			}
+		}
+		accountsRefreshStatus[cloudAccount.GetNodeName()] = refreshMetadata
+	}
+	log.Info().Msgf("Fetched cloud accounts")
+	return accountsRefreshStatus, nil
+}
+
+func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount, scheduleRefresh bool) error {
 	nodeId := util.GetNodeID(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
@@ -70,6 +114,7 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Monit
 				MonitoredAccounts:        monitoredAccounts,
 				NodeId:                   nodeId,
 				OrganizationAccountId:    &c.config.OrganizationID,
+				ScheduleRefresh:          &scheduleRefresh,
 				Version:                  c.config.Version,
 			},
 		)
@@ -82,6 +127,7 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Monit
 				HostNodeId:               c.config.NodeID,
 				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
 				NodeId:                   nodeId,
+				ScheduleRefresh:          &scheduleRefresh,
 				Version:                  c.config.Version,
 			},
 		)

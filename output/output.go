@@ -37,11 +37,12 @@ func WriteScanStatus(status, scanID, scanMessage string) {
 	}
 }
 
-func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage string) {
+func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage, refreshMetadata string) {
 	var scanLogDoc = make(map[string]interface{})
 	scanLogDoc["cloud_node_id"] = nodeID
 	scanLogDoc["refresh_status"] = refreshStatus
 	scanLogDoc["refresh_message"] = refreshMessage
+	scanLogDoc["refresh_metadata"] = refreshMetadata
 	scanLogDoc["updated_at"] = time.Now().UTC().UnixMilli()
 
 	byteJSON, err := json.Marshal(scanLogDoc)

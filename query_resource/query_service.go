@@ -1,6 +1,8 @@
 package query_resource
 
 import (
+	"encoding/json"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	"github.com/deepfence/ThreatMapper/deepfence_utils/utils"
 	"github.com/deepfence/cloud-scanner/cloud_resource_changes"
+	"github.com/deepfence/cloud-scanner/internal/deepfence"
 	"github.com/deepfence/cloud-scanner/output"
 	"github.com/deepfence/cloud-scanner/util"
 )
@@ -17,6 +20,7 @@ type ResourceRefreshService struct {
 	resourceRefreshCount  atomic.Int32
 	resourceRefreshStatus sync.Map
 	CloudResourceChanges  cloud_resource_changes.CloudResourceChanges
+	dfClient              *deepfence.Client
 	mutex                 sync.Mutex
 }
 
@@ -25,12 +29,18 @@ func NewResourceRefreshService(config util.Config) (*ResourceRefreshService, err
 	if err != nil {
 		return nil, err
 	}
+	dfClient, err := deepfence.NewClient(config)
+	if err != nil {
+		log.Error().Msgf("deepfence.NewClient(config) error: %s", err.Error())
+		return nil, err
+	}
 
 	return &ResourceRefreshService{
 		config:                config,
 		resourceRefreshCount:  atomic.Int32{},
 		resourceRefreshStatus: sync.Map{},
 		CloudResourceChanges:  cloudResourceChanges,
+		dfClient:              dfClient,
 	}, nil
 }
 
@@ -59,9 +69,21 @@ func (r *ResourceRefreshService) Unlock() {
 	r.mutex.Unlock()
 }
 
-func (r *ResourceRefreshService) SetResourceRefreshStatus(account util.AccountsToRefresh, refreshStatus string) {
+func (r *ResourceRefreshService) SetResourceRefreshStatus(account util.AccountsToRefresh, refreshStatus string, refreshMetadata util.RefreshMetadata) {
 	r.resourceRefreshStatus.Store(account.AccountID, refreshStatus)
-	output.WriteCloudResourceRefreshStatus(account.NodeID, refreshStatus, "")
+
+	var refreshMeta []byte
+	var err error
+	refreshMessage := ""
+	if refreshStatus == utils.ScanStatusInProgress {
+		refreshMessage = fmt.Sprintf("Refreshing %s. Progress: %d/%d resources.",
+			refreshMetadata.InProgressResourceType, refreshMetadata.CompletedResourceTypes, refreshMetadata.TotalResourceTypes)
+		refreshMeta, err = json.Marshal(refreshMetadata)
+		if err != nil {
+			log.Error().Msg(err.Error())
+		}
+	}
+	output.WriteCloudResourceRefreshStatus(account.NodeID, refreshStatus, refreshMessage, string(refreshMeta))
 }
 
 // SkipCloudAuditLogUpdate Weather to skip cloud audit log based resource updates

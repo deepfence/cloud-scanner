@@ -109,6 +109,7 @@ func main() {
 
 	config.NodeID = util.GetNodeID(config.CloudProvider, config.AccountID)
 	config.Version = Version
+	config.DatabasePersistenceSupported = config.DeploymentMode == util.DeploymentModeKubernetes || config.DeploymentMode == util.DeploymentModeDocker
 
 	configJson, err := json.MarshalIndent(config, "", "\t")
 	if err == nil {
