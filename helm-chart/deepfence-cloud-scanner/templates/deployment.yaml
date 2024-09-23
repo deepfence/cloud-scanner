@@ -74,6 +74,10 @@ spec:
             value: "21600"
           - name: CLOUD_SCANNER_POLICY
             value: "{{ .Values.cloudAccount.cloudScannerPolicy }}"
+          {{- range $k, $v := .Values.env_vars }} 
+          - name: {{ $k }}
+            value: {{ $v }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           {{- with .Values.volumeMounts }}
