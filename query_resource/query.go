@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	CloudResourcesFile = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resources/cloud_resources.log"
+	CloudResourcesFile = util.InstallDirectory + "/var/log/fenced/cloud-resources/cloud_resources.log"
 )
 
 type CloudResourceInfo struct {
@@ -99,8 +99,11 @@ func (r *ResourceRefreshService) QueryAndRegisterResources(accountsToRefresh []u
 	}
 
 	for _, account := range accountsToRefresh {
-		refreshMetadata := refreshStatus[account.AccountID]
-		r.SetResourceRefreshStatus(account, utils.ScanStatusStarting, refreshMetadata)
+		if refreshMetadata, ok := refreshStatus[account.AccountID]; ok && refreshMetadata.InProgressResourceType != "" {
+			r.SetResourceRefreshStatus(account, utils.ScanStatusStarting, refreshMetadata)
+		} else {
+			r.SetResourceRefreshStatus(account, utils.ScanStatusStarting, util.RefreshMetadata{})
+		}
 	}
 
 	count := 0

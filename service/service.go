@@ -382,7 +382,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 				case <-refreshTicker.C:
 					registerErr = c.dfClient.RegisterCloudAccount(c.GetOrganizationAccounts(), true)
 					if registerErr != nil {
-						log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
+						log.Error().Msgf("Error in initial registration of cloud account: %s", err.Error())
 					} else {
 						return nil
 					}
@@ -393,7 +393,7 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 		}
 		err = registerCloudScanner()
 		if err != nil {
-			log.Error().Msgf("Error in inital registering cloud account: %s", err.Error())
+			log.Error().Msgf("Error in initial registration of cloud account: %s", err.Error())
 			return err
 		}
 	}
@@ -433,7 +433,7 @@ func processAzureCredentials(c *ComplianceScanService) {
 			"  client_secret = \"" + os.Getenv("AZURE_CLIENT_SECRET") + "\"\n" +
 			"  ignore_error_codes = [\"AccessDenied\", \"AccessDeniedException\", \"NotAuthorized\", \"UnauthorizedOperation\", \"AuthorizationError\"]\n}\n"
 	}
-	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/azure.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.SteampipeInstallDirectory+"/config/azure.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
@@ -478,7 +478,7 @@ func processAwsCredentials(c *ComplianceScanService) {
 		}
 	}
 
-	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/aws.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.SteampipeInstallDirectory+"/config/aws.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}
@@ -501,7 +501,7 @@ func processGcpCredentials(c *ComplianceScanService) {
 	} else {
 		steampipeConfigFile += "connection \"gcp_" + strings.Replace(c.config.AccountID, "-", "", -1) + "\" {\n  plugin  = \"" + util.SteampipeGCPPluginVersion + "\"\n  project = \"" + c.config.AccountID + "\"\n}\n"
 	}
-	err := saveFileOverwrite(util.HomeDirectory+"/.steampipe/config/gcp.spc", steampipeConfigFile)
+	err := saveFileOverwrite(util.SteampipeInstallDirectory+"/config/gcp.spc", steampipeConfigFile)
 	if err != nil {
 		log.Fatal().Msgf(err.Error())
 	}

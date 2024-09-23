@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
+	"github.com/deepfence/cloud-scanner/util"
 )
 
 var (
-	scanStatusFilename                 = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
-	cloudResourceRefreshStatusFilename = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resource-refresh-log/cloud_resource_refresh_status.log"
-	ScanFilename                       = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
+	scanStatusFilename                 = util.InstallDirectory + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
+	cloudResourceRefreshStatusFilename = util.InstallDirectory + "/var/log/fenced/cloud-resource-refresh-log/cloud_resource_refresh_status.log"
+	ScanFilename                       = util.InstallDirectory + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
 )
 
 func WriteScanStatus(status, scanID, scanMessage string) {

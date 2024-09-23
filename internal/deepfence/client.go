@@ -90,7 +90,7 @@ func (c *Client) GetCloudAccountsRefreshStatus() (map[string]util.RefreshMetadat
 	return accountsRefreshStatus, nil
 }
 
-func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount, scheduleRefresh bool) error {
+func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.MonitoredAccount, initialRequest bool) error {
 	nodeId := util.GetNodeID(c.config.CloudProvider, c.config.AccountID)
 
 	req := c.client.Client().CloudNodesAPI.RegisterCloudNodeAccount(context.Background())
@@ -106,29 +106,33 @@ func (c *Client) RegisterCloudAccount(monitoredOrganizationAccounts []util.Monit
 
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				AccountName:              &c.config.AccountName,
-				AccountId:                c.config.AccountID,
-				CloudProvider:            c.config.CloudProvider,
-				HostNodeId:               c.config.NodeID,
-				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
-				MonitoredAccounts:        monitoredAccounts,
-				NodeId:                   nodeId,
-				OrganizationAccountId:    &c.config.OrganizationID,
-				ScheduleRefresh:          &scheduleRefresh,
-				Version:                  c.config.Version,
+				AccountName:               &c.config.AccountName,
+				AccountId:                 c.config.AccountID,
+				CloudProvider:             c.config.CloudProvider,
+				HostNodeId:                c.config.NodeID,
+				IsOrganizationDeployment:  &c.config.IsOrganizationDeployment,
+				MonitoredAccounts:         monitoredAccounts,
+				NodeId:                    nodeId,
+				OrganizationAccountId:     &c.config.OrganizationID,
+				InitialRequest:            &initialRequest,
+				InstallationId:            c.config.InstallationID,
+				PersistentVolumeSupported: &c.config.DatabasePersistenceSupported,
+				Version:                   c.config.Version,
 			},
 		)
 	} else {
 		req = req.ModelCloudNodeAccountRegisterReq(
 			client.ModelCloudNodeAccountRegisterReq{
-				AccountName:              &c.config.AccountName,
-				AccountId:                c.config.AccountID,
-				CloudProvider:            c.config.CloudProvider,
-				HostNodeId:               c.config.NodeID,
-				IsOrganizationDeployment: &c.config.IsOrganizationDeployment,
-				NodeId:                   nodeId,
-				ScheduleRefresh:          &scheduleRefresh,
-				Version:                  c.config.Version,
+				AccountName:               &c.config.AccountName,
+				AccountId:                 c.config.AccountID,
+				CloudProvider:             c.config.CloudProvider,
+				HostNodeId:                c.config.NodeID,
+				IsOrganizationDeployment:  &c.config.IsOrganizationDeployment,
+				NodeId:                    nodeId,
+				InitialRequest:            &initialRequest,
+				InstallationId:            c.config.InstallationID,
+				PersistentVolumeSupported: &c.config.DatabasePersistenceSupported,
+				Version:                   c.config.Version,
 			},
 		)
 	}

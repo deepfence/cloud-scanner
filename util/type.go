@@ -75,6 +75,7 @@ type Config struct {
 	NodeID                       string                      `ignored:"true" json:"-"`
 	Version                      string                      `ignored:"true" json:"version"`
 	DatabasePersistenceSupported bool                        `ignored:"true" json:"database_persistence_supported"`
+	InstallationID               string                      `ignored:"true" json:"installation_id"`
 }
 
 type MonitoredAccount struct {
@@ -173,7 +174,9 @@ type RefreshMetadata struct {
 }
 
 var (
-	HomeDirectory string
+	HomeDirectory             string
+	InstallDirectory          string
+	SteampipeInstallDirectory string
 
 	SteampipeAWSPluginVersion     = fmt.Sprintf("aws@%s", os.Getenv("STEAMPIPE_AWS_PLUGIN_VERSION"))
 	SteampipeGCPPluginVersion     = fmt.Sprintf("gcp@%s", os.Getenv("STEAMPIPE_GCP_PLUGIN_VERSION"))
@@ -185,5 +188,15 @@ func init() {
 	HomeDirectory = os.Getenv("HOME_DIR")
 	if HomeDirectory == "" {
 		HomeDirectory = "/home/deepfence"
+	}
+
+	InstallDirectory = os.Getenv("DF_INSTALL_DIR")
+	if InstallDirectory == "" {
+		InstallDirectory = "/home/deepfence"
+	}
+
+	SteampipeInstallDirectory = os.Getenv("STEAMPIPE_INSTALL_DIR")
+	if SteampipeInstallDirectory == "" {
+		SteampipeInstallDirectory = "/home/deepfence/.steampipe"
 	}
 }

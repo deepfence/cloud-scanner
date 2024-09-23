@@ -76,7 +76,7 @@ func (r *ResourceRefreshService) SetResourceRefreshStatus(account util.AccountsT
 	var err error
 	refreshMessage := ""
 	if refreshStatus == utils.ScanStatusInProgress {
-		refreshMessage = fmt.Sprintf("Refreshing %s. Progress: %d/%d resources.",
+		refreshMessage = fmt.Sprintf("Refreshing %s. Progress: %d/%d resource types.",
 			refreshMetadata.InProgressResourceType, refreshMetadata.CompletedResourceTypes, refreshMetadata.TotalResourceTypes)
 		refreshMeta, err = json.Marshal(refreshMetadata)
 		if err != nil {
