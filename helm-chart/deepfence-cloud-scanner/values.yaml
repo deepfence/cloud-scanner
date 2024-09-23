@@ -80,6 +80,14 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
+env_vars: {}
+  ## required for azure cloud
+  # AZURE_TENANT_ID: 
+  # AZURE_REGION:
+  # AZURE_CLIENT_ID :
+  # AZURE_CLIENT_SECRET:
+  # AZURE_SUBSCRIPTION_ID: 
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
