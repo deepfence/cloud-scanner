@@ -20,6 +20,28 @@ Parameters:
     AllowedValues:
     - arn:aws:iam::aws:policy/SecurityAudit
     - arn:aws:iam::aws:policy/ReadOnlyAccess
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: Configuration
+      Parameters:
+      - EKSClusterName
+      - EKSClusterOIDCURL
+      - K8sNamespace
+      - K8sServiceAccountName
+      - TaskIAMRole
+    ParameterLabels:
+      EKSClusterName:
+        default: EKS Cluster Name
+      EKSClusterOIDCURL:
+        default: EKS Cluster OIDC URL
+      K8sNamespace:
+        default: Kubernetes Namespace
+      K8sServiceAccountName:
+        default: Kubernetes Service Account Name
+      TaskIAMRole:
+        default: Task IAM Role
 Resources:
   ReadOnlyRole:
     Type: AWS::IAM::Role
