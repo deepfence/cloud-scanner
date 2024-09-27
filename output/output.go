@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
+	"github.com/deepfence/cloud-scanner/util"
 )
 
 var (
-	scanStatusFilename                 = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
-	cloudResourceRefreshStatusFilename = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resource-refresh-log/cloud_resource_refresh_status.log"
-	ScanFilename                       = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
+	scanStatusFilename                 = util.InstallDirectory + "/var/log/fenced/cloud-scanner-log/cloud_scanner_status.log"
+	cloudResourceRefreshStatusFilename = util.InstallDirectory + "/var/log/fenced/cloud-resource-refresh-log/cloud_resource_refresh_status.log"
+	ScanFilename                       = util.InstallDirectory + "/var/log/fenced/cloud-scanner/cloud_scanner.log"
 )
 
 func WriteScanStatus(status, scanID, scanMessage string) {
@@ -37,11 +38,12 @@ func WriteScanStatus(status, scanID, scanMessage string) {
 	}
 }
 
-func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage string) {
+func WriteCloudResourceRefreshStatus(nodeID, refreshStatus, refreshMessage, refreshMetadata string) {
 	var scanLogDoc = make(map[string]interface{})
 	scanLogDoc["cloud_node_id"] = nodeID
 	scanLogDoc["refresh_status"] = refreshStatus
 	scanLogDoc["refresh_message"] = refreshMessage
+	scanLogDoc["refresh_metadata"] = refreshMetadata
 	scanLogDoc["updated_at"] = time.Now().UTC().UnixMilli()
 
 	byteJSON, err := json.Marshal(scanLogDoc)

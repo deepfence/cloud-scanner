@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"os"
+	"path"
+	"strings"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
@@ -109,6 +112,14 @@ func main() {
 
 	config.NodeID = util.GetNodeID(config.CloudProvider, config.AccountID)
 	config.Version = Version
+	config.DatabasePersistenceSupported = config.DeploymentMode == util.DeploymentModeKubernetes || config.DeploymentMode == util.DeploymentModeDocker
+
+	fileContent, err := os.ReadFile(path.Join(util.InstallDirectory, ".install_id"))
+	if err != nil {
+		log.Fatal().Msg(err.Error())
+		return
+	}
+	config.InstallationID = strings.ReplaceAll(string(fileContent), "\n", "")
 
 	configJson, err := json.MarshalIndent(config, "", "\t")
 	if err == nil {

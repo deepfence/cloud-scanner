@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "deepfence-cloud-scanner.fullname" . }}-pvc
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "deepfence-cloud-scanner.labels" . | nindent 4 }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: {{ .Values.volume.storageClass }}
+  resources:
+    requests:
+      storage: "{{ .Values.volume.volumeSize }}"

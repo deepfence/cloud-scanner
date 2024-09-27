@@ -28,6 +28,9 @@ spec:
       serviceAccountName: {{ include "deepfence-cloud-scanner.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -37,6 +40,8 @@ spec:
           env:
           - name: MGMT_CONSOLE_URL
             value: "{{ required "managementConsoleUrl is required" .Values.managementConsoleUrl }}"
+          - name: DEPLOYMENT_MODE
+            value: "kubernetes"
           - name: MGMT_CONSOLE_PORT
             value: "{{ required "managementConsolePort is required" .Values.managementConsolePort }}"
           - name: DEEPFENCE_KEY
@@ -74,20 +79,21 @@ spec:
             value: "21600"
           - name: CLOUD_SCANNER_POLICY
             value: "{{ .Values.cloudAccount.cloudScannerPolicy }}"
-          {{- range $k, $v := .Values.env_vars }} 
+          - name: HOME_DIR
+            value: "/home/deepfence"
+          - name: DF_INSTALL_DIR
+            value: "/data/home/deepfence"
+          - name: STEAMPIPE_INSTALL_DIR
+            value: "/data/home/deepfence/.steampipe"
+          {{- range $k, $v := .Values.env_vars }}
           - name: {{ $k }}
             value: {{ $v }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- with .Values.volumeMounts }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-      {{- with .Values.volumes }}
-      volumes:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+          - mountPath: /data/home/deepfence
+            name: cloud-scanner
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -100,3 +106,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+      - name: cloud-scanner
+        persistentVolumeClaim:
+          claimName: {{ include "deepfence-cloud-scanner.fullname" . }}-pvc

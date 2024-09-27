@@ -45,6 +45,11 @@ const (
 //	}
 //)
 
+const (
+	DeploymentModeKubernetes = "kubernetes"
+	DeploymentModeDocker     = "docker"
+)
+
 type Config struct {
 	ManagementConsoleUrl     string   `envconfig:"MGMT_CONSOLE_URL" validate:"required" json:"management_console_url"`
 	ManagementConsolePort    string   `envconfig:"MGMT_CONSOLE_PORT" default:"443" json:"management_console_port"`
@@ -64,10 +69,13 @@ type Config struct {
 	LogLevel                 string   `envconfig:"DF_LOG_LEVEL" default:"info" json:"log_level"`
 	ScanInactiveThreshold    int      `envconfig:"SCAN_INACTIVE_THRESHOLD" default:"21600" json:"scan_inactive_threshold"`
 	CloudScannerPolicy       string   `envconfig:"CLOUD_SCANNER_POLICY" json:"cloud_scanner_policy"`
+	DeploymentMode           string   `envconfig:"DEPLOYMENT_MODE" json:"deployment_mode"`
 
-	CloudMetadata cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
-	NodeID        string                      `ignored:"true" json:"-"`
-	Version       string                      `ignored:"true" json:"version"`
+	CloudMetadata                cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
+	NodeID                       string                      `ignored:"true" json:"-"`
+	Version                      string                      `ignored:"true" json:"version"`
+	DatabasePersistenceSupported bool                        `ignored:"true" json:"database_persistence_supported"`
+	InstallationID               string                      `ignored:"true" json:"installation_id"`
 }
 
 type MonitoredAccount struct {
@@ -159,8 +167,16 @@ type AccountsToRefresh struct {
 	ResourceTypes []string
 }
 
+type RefreshMetadata struct {
+	InProgressResourceType string `json:"in_progress"`
+	CompletedResourceTypes int    `json:"completed"`
+	TotalResourceTypes     int    `json:"total"`
+}
+
 var (
-	HomeDirectory string
+	HomeDirectory             string
+	InstallDirectory          string
+	SteampipeInstallDirectory string
 
 	SteampipeAWSPluginVersion     = fmt.Sprintf("aws@%s", os.Getenv("STEAMPIPE_AWS_PLUGIN_VERSION"))
 	SteampipeGCPPluginVersion     = fmt.Sprintf("gcp@%s", os.Getenv("STEAMPIPE_GCP_PLUGIN_VERSION"))
@@ -172,5 +188,15 @@ func init() {
 	HomeDirectory = os.Getenv("HOME_DIR")
 	if HomeDirectory == "" {
 		HomeDirectory = "/home/deepfence"
+	}
+
+	InstallDirectory = os.Getenv("DF_INSTALL_DIR")
+	if InstallDirectory == "" {
+		InstallDirectory = "/home/deepfence"
+	}
+
+	SteampipeInstallDirectory = os.Getenv("STEAMPIPE_INSTALL_DIR")
+	if SteampipeInstallDirectory == "" {
+		SteampipeInstallDirectory = "/home/deepfence/.steampipe"
 	}
 }

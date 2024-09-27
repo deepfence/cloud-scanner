@@ -65,6 +65,15 @@ cloudAuditLogIDs: ""
 # service account needs special handling
 awsCredentialSource: "ServiceAccount"
 
+# priorityClassName for pods
+priorityClassName: ""
+
+volume:
+  # Storage class
+  # AWS: gp3, GCP: standard
+  storageClass: ""
+  volumeSize: 200G
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -113,19 +122,6 @@ resources:
   requests:
     cpu: 500m
     memory: 1024Mi
-
-# Additional volumes on the output Deployment definition.
-volumes: []
-# - name: foo
-#   secret:
-#     secretName: mysecret
-#     optional: false
-
-# Additional volumeMounts on the output Deployment definition.
-volumeMounts: []
-# - name: foo
-#   mountPath: "/etc/foo"
-#   readOnly: true
 
 nodeSelector:
   kubernetes.io/os: linux

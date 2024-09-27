@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	CloudResourcesFile = os.Getenv("DF_INSTALL_DIR") + "/var/log/fenced/cloud-resources/cloud_resources.log"
+	CloudResourcesFile = util.InstallDirectory + "/var/log/fenced/cloud-resources/cloud_resources.log"
 )
 
 type CloudResourceInfo struct {
@@ -90,17 +90,41 @@ func (r *ResourceRefreshService) QueryAndRegisterResources(accountsToRefresh []u
 	}
 	defer cloudResourcesFile.Close()
 
+	var refreshStatus map[string]util.RefreshMetadata
+	if r.config.DatabasePersistenceSupported {
+		refreshStatus, err = r.dfClient.GetCloudAccountsRefreshStatus()
+		if err != nil {
+			return []error{err}
+		}
+	}
+
 	for _, account := range accountsToRefresh {
-		r.SetResourceRefreshStatus(account, utils.ScanStatusStarting)
+		if refreshMetadata, ok := refreshStatus[account.AccountID]; ok && refreshMetadata.InProgressResourceType != "" {
+			r.SetResourceRefreshStatus(account, utils.ScanStatusStarting, refreshMetadata)
+		} else {
+			r.SetResourceRefreshStatus(account, utils.ScanStatusStarting, util.RefreshMetadata{})
+		}
 	}
 
 	count := 0
 	var errs = make([]error, 0)
 	for _, account := range accountsToRefresh {
 		log.Debug().Msgf("Started querying resources for %v", account)
-		r.SetResourceRefreshStatus(account, utils.ScanStatusInProgress)
 
-		for _, cloudResourceInfo := range cloudProviderToResourceMap[r.config.CloudProvider] {
+		skipThisResourceType := false
+		var inProgressResourceType string
+		if len(account.ResourceTypes) > 0 {
+			// Partial refresh from cloudtrail
+			r.SetResourceRefreshStatus(account, utils.ScanStatusInProgress, util.RefreshMetadata{})
+		} else {
+			if refreshMetadata, ok := refreshStatus[account.AccountID]; ok && refreshMetadata.InProgressResourceType != "" {
+				inProgressResourceType = refreshMetadata.InProgressResourceType
+				skipThisResourceType = true
+			}
+		}
+
+		totalResourceTypes := len(cloudProviderToResourceMap[r.config.CloudProvider])
+		for i, cloudResourceInfo := range cloudProviderToResourceMap[r.config.CloudProvider] {
 			// If ResourceTypes is empty, refresh all resource types. Otherwise, only specified ones
 			if len(account.ResourceTypes) > 0 {
 				if !util.InSlice(cloudResourceInfo.Table, account.ResourceTypes) {
@@ -111,6 +135,19 @@ func (r *ResourceRefreshService) QueryAndRegisterResources(accountsToRefresh []u
 					errs = append(errs, err)
 					continue
 				}
+			} else {
+				if skipThisResourceType {
+					if inProgressResourceType == cloudResourceInfo.Table {
+						skipThisResourceType = false
+					} else {
+						continue
+					}
+				}
+				r.SetResourceRefreshStatus(account, utils.ScanStatusInProgress, util.RefreshMetadata{
+					InProgressResourceType: cloudResourceInfo.Table,
+					CompletedResourceTypes: i,
+					TotalResourceTypes:     totalResourceTypes,
+				})
 			}
 
 			ingestedCount, err := r.queryResources(account.AccountID, cloudResourceInfo, cloudResourcesFile)
@@ -123,7 +160,7 @@ func (r *ResourceRefreshService) QueryAndRegisterResources(accountsToRefresh []u
 		}
 
 		log.Debug().Msgf("Querying resources complete for %v", account)
-		r.SetResourceRefreshStatus(account, utils.ScanStatusSuccess)
+		r.SetResourceRefreshStatus(account, utils.ScanStatusSuccess, util.RefreshMetadata{})
 	}
 	log.Info().Msgf("Cloud resources ingested: %d", count)
 	return errs
