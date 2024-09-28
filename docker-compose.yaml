@@ -1,7 +1,7 @@
 services:
   cloud-scanner:
     container_name: deepfence-cloud-scanner
-    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner:${DF_IMG_TAG:-2.3.1}
+    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner:${DF_IMG_TAG:-2.4.0}
     restart: unless-stopped
     environment:
       # Deepfence management console url and port
@@ -45,7 +45,7 @@ services:
       CLOUD_AUDIT_LOG_IDS: ""
       HTTP_SERVER_REQUIRED: "false"
       SUCCESS_SIGNAL_URL: ""
-
+      
       DF_LOG_LEVEL: info
       SCAN_INACTIVE_THRESHOLD: "21600"
       
@@ -53,7 +53,18 @@ services:
       # Policy set for Cloud Scanner in CloudFormation / terraform
       # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
       CLOUD_SCANNER_POLICY: ""
+      
+      DEPLOYMENT_MODE: "docker"
+      HOME_DIR: "/home/deepfence"
+      DF_INSTALL_DIR: "/data/home/deepfence"
+      STEAMPIPE_INSTALL_DIR: "/data/home/deepfence/.steampipe"
+    volumes:
+    - cloud_scanner_data:/data:rw
     logging:
       driver: "json-file"
       options:
         max-size: "50m"
+
+volumes:
+  cloud_scanner_data:
+    driver: local
