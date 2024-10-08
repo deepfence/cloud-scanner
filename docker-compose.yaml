@@ -1,7 +1,7 @@
 services:
   cloud-scanner:
     container_name: deepfence-cloud-scanner
-    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner:${DF_IMG_TAG:-2.4.0}
+    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner_ce:${DF_IMG_TAG:-2.4.0}
     restart: unless-stopped
     environment:
       # Deepfence management console url and port
@@ -53,6 +53,12 @@ services:
       # Policy set for Cloud Scanner in CloudFormation / terraform
       # arn:aws:iam::aws:policy/ReadOnlyAccess / arn:aws:iam::aws:policy/SecurityAudit
       CLOUD_SCANNER_POLICY: ""
+      
+      # AZURE_TENANT_ID: ""
+      # AZURE_REGION: ""
+      # AZURE_CLIENT_ID: ""
+      # AZURE_CLIENT_SECRET: ""
+      # AZURE_SUBSCRIPTION_ID: ""
       
       DEPLOYMENT_MODE: "docker"
       HOME_DIR: "/home/deepfence"
