@@ -243,7 +243,7 @@ func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, err
 
 func saveGCPCredentialsToFile(credentials string) (string, error) {
     
-    configDir := "/home/deepfence/.config/gcloud/"
+    configDir := util.HomeDirectory+"/.config/gcloud/"
     credentialFilePath := configDir + "application_default_credentials.json"
 
     // Check if the directory exists, create it if not
