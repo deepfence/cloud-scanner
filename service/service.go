@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -25,6 +26,7 @@ import (
 	"github.com/deepfence/cloud-scanner/scanner"
 	"github.com/deepfence/cloud-scanner/util"
 	"google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -167,40 +169,67 @@ func (c *ComplianceScanService) fetchGCPOrganizationProjects() ([]util.AccountsT
 		return nil, err
 	}
 
-	c.organizationAccountIDsLock.Lock()
+	if c.config.IsOrganizationDeployment {
+		c.organizationAccountIDsLock.Lock()
 
-	accountsMap := make(map[string]struct{}, len(c.organizationAccountIDs))
-	for _, account := range c.organizationAccountIDs {
-		accountsMap[account.AccountID] = struct{}{}
-	}
-
-	var newAccounts []util.AccountsToRefresh
-	for _, account := range projects {
-		if _, ok := accountsMap[account.AccountID]; !ok {
-			newAccounts = append(newAccounts, util.AccountsToRefresh{
-				AccountID: account.AccountID,
-				NodeID:    account.NodeID,
-			})
+		accountsMap := make(map[string]struct{}, len(c.organizationAccountIDs))
+		for _, account := range c.organizationAccountIDs {
+			accountsMap[account.AccountID] = struct{}{}
 		}
+
+		var newAccounts []util.AccountsToRefresh
+		for _, account := range projects {
+			if _, ok := accountsMap[account.AccountID]; !ok {
+				newAccounts = append(newAccounts, util.AccountsToRefresh{
+					AccountID: account.AccountID,
+					NodeID:    account.NodeID,
+				})
+			}
+		}
+
+		c.organizationAccountIDs = projects
+		c.organizationAccountIDsLock.Unlock()
+
+		return newAccounts, nil
 	}
 
-	c.organizationAccountIDs = projects
-	c.organizationAccountIDsLock.Unlock()
-
-	return newAccounts, nil
+	return nil, nil
 }
 
 func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, error) {
+	log.Info().Msg("Fetching GCP projects")
 	ctx := context.Background()
-	crm, err := cloudresourcemanager.NewService(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch GCP projects")
-		return nil, err
+
+	var crm *cloudresourcemanager.Service
+	var err error
+
+	if c.config.GCPCredentials != "" && strings.TrimSpace(c.config.GCPCredentials) != "" {
+		// Save the GCP credentials to a file
+		credentialFilePath, err := saveGCPCredentialsToFile(c.config.GCPCredentials)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to save GCP credentials to file, falling back to default authentication")
+		} else {
+			log.Info().Msgf("GCP credentials saved to file at: %s", credentialFilePath)
+			clientOption := option.WithCredentialsFile(credentialFilePath)
+			crm, err = cloudresourcemanager.NewService(ctx, clientOption)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to create GCP client with provided credentials, falling back to default authentication")
+			}
+		}
 	}
+
+	if crm == nil {
+		crm, err = cloudresourcemanager.NewService(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create GCP client with default authentication")
+			return nil, err
+		}
+	}
+
 	projectsRequest := crm.Projects.List().PageSize(1000)
 	projectsResponse, err := projectsRequest.Do()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to fetch GCP projects")
+		log.Error().Err(err).Msg("Failed to fetch GCP projects")
 		return nil, err
 	}
 
@@ -212,7 +241,35 @@ func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, err
 			NodeID:      util.GetNodeID(c.config.CloudProvider, project.ProjectId),
 		}
 	}
+
 	return organizationAccountIDs, nil
+}
+
+
+func saveGCPCredentialsToFile(credentials string) (string, error) {
+    
+    configDir := util.HomeDirectory+"/.config/gcloud/"
+    credentialFilePath := configDir + "application_default_credentials.json"
+
+    // Check if the directory exists, create it if not
+    if _, err := os.Stat(configDir); os.IsNotExist(err) {
+        err = os.MkdirAll(configDir, 0700)
+        if err != nil {
+            return "", fmt.Errorf("failed to create directory: %w", err)
+        }
+    }
+
+    credBytes, err := base64.StdEncoding.DecodeString(credentials)
+    if err != nil {
+        return "", fmt.Errorf("failed to decode GCP credentials: %w", err)
+    }
+
+    err = os.WriteFile(credentialFilePath, credBytes, 0600)
+    if err != nil {
+        return "", fmt.Errorf("failed to write credentials to file: %w", err)
+    }
+
+    return credentialFilePath, nil
 }
 
 func (c *ComplianceScanService) fetchAzureTenantSubscriptions() ([]util.MonitoredAccount, error) {
@@ -350,6 +407,12 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 				if err != nil {
 					return err
 				}
+			}
+		}else {
+			// Handle individual project credentials
+			if _, err := c.fetchGCPOrganizationProjects(); err != nil {
+				log.Error().Msg(err.Error())
+				return err
 			}
 		}
 		processGcpCredentials(c)
@@ -770,3 +833,4 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 		}
 	}
 }
+

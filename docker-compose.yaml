@@ -60,6 +60,9 @@ services:
       # AZURE_CLIENT_SECRET: ""
       # AZURE_SUBSCRIPTION_ID: ""
       
+      # Provide base64 encoded Service Account Keys for GCP Scanner  
+      # GCP_SERVICE_ACCOUNT_CREDENTIAL: ""
+      
       DEPLOYMENT_MODE: "docker"
       HOME_DIR: "/home/deepfence"
       DF_INSTALL_DIR: "/data/home/deepfence"
@@ -74,3 +77,4 @@ services:
 volumes:
   cloud_scanner_data:
     driver: local
+
