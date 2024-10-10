@@ -407,8 +407,10 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 					return err
 				}
 			}
-		} else {
-			saveGCPCredentialsToFile(c.config.GCPCredentials)
+		} else if !c.config.IsOrganizationDeployment {
+			if c.config.GCPCredentials != "" && strings.TrimSpace(c.config.GCPCredentials) != "" {
+				saveGCPCredentialsToFile(c.config.GCPCredentials)
+			}
 		}
 		processGcpCredentials(c)
 	case util.CloudProviderAzure:
