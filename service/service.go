@@ -245,31 +245,30 @@ func (c *ComplianceScanService) fetchGCPProjects() ([]util.MonitoredAccount, err
 	return organizationAccountIDs, nil
 }
 
-
 func saveGCPCredentialsToFile(credentials string) (string, error) {
-    
-    configDir := util.HomeDirectory+"/.config/gcloud/"
-    credentialFilePath := configDir + "application_default_credentials.json"
 
-    // Check if the directory exists, create it if not
-    if _, err := os.Stat(configDir); os.IsNotExist(err) {
-        err = os.MkdirAll(configDir, 0700)
-        if err != nil {
-            return "", fmt.Errorf("failed to create directory: %w", err)
-        }
-    }
+	configDir := util.HomeDirectory + "/.config/gcloud/"
+	credentialFilePath := configDir + "application_default_credentials.json"
 
-    credBytes, err := base64.StdEncoding.DecodeString(credentials)
-    if err != nil {
-        return "", fmt.Errorf("failed to decode GCP credentials: %w", err)
-    }
+	// Check if the directory exists, create it if not
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		err = os.MkdirAll(configDir, 0700)
+		if err != nil {
+			return "", fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
 
-    err = os.WriteFile(credentialFilePath, credBytes, 0600)
-    if err != nil {
-        return "", fmt.Errorf("failed to write credentials to file: %w", err)
-    }
+	credBytes, err := base64.StdEncoding.DecodeString(credentials)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode GCP credentials: %w", err)
+	}
 
-    return credentialFilePath, nil
+	err = os.WriteFile(credentialFilePath, credBytes, 0600)
+	if err != nil {
+		return "", fmt.Errorf("failed to write credentials to file: %w", err)
+	}
+
+	return credentialFilePath, nil
 }
 
 func (c *ComplianceScanService) fetchAzureTenantSubscriptions() ([]util.MonitoredAccount, error) {
@@ -408,12 +407,8 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 					return err
 				}
 			}
-		}else {
-			// Handle individual project credentials
-			if _, err := c.fetchGCPOrganizationProjects(); err != nil {
-				log.Error().Msg(err.Error())
-				return err
-			}
+		} else {
+			saveGCPCredentialsToFile(c.config.GCPCredentials)
 		}
 		processGcpCredentials(c)
 	case util.CloudProviderAzure:
@@ -833,4 +828,3 @@ func (c *ComplianceScanService) handleRequest(conn net.Conn) {
 		}
 	}
 }
-
