@@ -106,6 +106,8 @@ func main() {
 		if config.IsOrganizationDeployment && config.RoleName == "" {
 			log.Fatal().Msgf("ROLE_NAME is required in aws installation")
 		}
+	case util.CloudProviderGCP:
+		config.GCPCredentials = strings.TrimSpace(config.GCPCredentials)
 	default:
 		config.AWSCredentialSource = ""
 	}
