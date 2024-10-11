@@ -70,6 +70,7 @@ type Config struct {
 	ScanInactiveThreshold    int      `envconfig:"SCAN_INACTIVE_THRESHOLD" default:"21600" json:"scan_inactive_threshold"`
 	CloudScannerPolicy       string   `envconfig:"CLOUD_SCANNER_POLICY" json:"cloud_scanner_policy"`
 	DeploymentMode           string   `envconfig:"DEPLOYMENT_MODE" json:"deployment_mode"`
+	GCPCredentials string `envconfig:"GCP_SERVICE_ACCOUNT_CREDENTIAL" json:"gcp_service_account_credential"`
 
 	CloudMetadata                cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
 	NodeID                       string                      `ignored:"true" json:"-"`
@@ -200,3 +201,4 @@ func init() {
 		SteampipeInstallDirectory = "/home/deepfence/.steampipe"
 	}
 }
+
