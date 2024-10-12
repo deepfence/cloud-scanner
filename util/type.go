@@ -70,7 +70,7 @@ type Config struct {
 	ScanInactiveThreshold    int      `envconfig:"SCAN_INACTIVE_THRESHOLD" default:"21600" json:"scan_inactive_threshold"`
 	CloudScannerPolicy       string   `envconfig:"CLOUD_SCANNER_POLICY" json:"cloud_scanner_policy"`
 	DeploymentMode           string   `envconfig:"DEPLOYMENT_MODE" json:"deployment_mode"`
-	GCPCredentials string `envconfig:"GCP_SERVICE_ACCOUNT_CREDENTIAL" json:"gcp_service_account_credential"`
+	GCPCredentials           string   `envconfig:"GCP_SERVICE_ACCOUNT_CREDENTIAL" json:"gcp_service_account_credential"`
 
 	CloudMetadata                cloudmetadata.CloudMetadata `ignored:"true" json:"cloud_metadata"`
 	NodeID                       string                      `ignored:"true" json:"-"`
@@ -183,6 +183,8 @@ var (
 	SteampipeGCPPluginVersion     = fmt.Sprintf("gcp@%s", os.Getenv("STEAMPIPE_GCP_PLUGIN_VERSION"))
 	SteampipeAzurePluginVersion   = fmt.Sprintf("azure@%s", os.Getenv("STEAMPIPE_AZURE_PLUGIN_VERSION"))
 	SteampipeAzureADPluginVersion = fmt.Sprintf("azuread@%s", os.Getenv("STEAMPIPE_AZURE_AD_PLUGIN_VERSION"))
+
+	GCPCredentialFilePath string
 )
 
 func init() {
@@ -200,5 +202,6 @@ func init() {
 	if SteampipeInstallDirectory == "" {
 		SteampipeInstallDirectory = "/home/deepfence/.steampipe"
 	}
-}
 
+	GCPCredentialFilePath = HomeDirectory + "/.config/gcloud/application_default_credentials.json"
+}
