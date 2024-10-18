@@ -112,7 +112,7 @@ func (c *CloudResourceChangesAWS) getS3Region(s3BucketName, accountID string) st
 }
 
 func getOrgId(accountId string) string {
-	query := "steampipe query --output json \"select organization_id from aws_all.aws_account WHERE title LIKE '" + accountId + "' \""
+	query := "steampipe query --output json \"select organization_id from aws_all.aws_account WHERE account_id='" + accountId + "' \""
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()
 	orgId := ""

@@ -51,7 +51,7 @@ func (c *Client) GetCloudAccountsRefreshStatus() (map[string]util.RefreshMetadat
 
 	searchFilter := map[string][]interface{}{"cloud_provider": {c.config.CloudProvider}}
 	if c.config.IsOrganizationDeployment {
-		searchFilter["organization_id"] = []interface{}{c.config.OrganizationID}
+		searchFilter["organization_id"] = []interface{}{util.GetOrgNodeID(c.config.CloudProvider, c.config.OrganizationID)}
 	} else {
 		searchFilter["node_name"] = []interface{}{c.config.AccountID}
 	}
