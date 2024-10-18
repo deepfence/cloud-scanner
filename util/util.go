@@ -65,6 +65,10 @@ func GetNodeID(cloudProvider string, accountID string) string {
 	return fmt.Sprintf("%s-%s-%s", NodeTypeCloudAccount, cloudProvider, accountID)
 }
 
+func GetOrgNodeID(cloudProvider string, orgAccountID string) string {
+	return fmt.Sprintf("%s-%s-cloud-org", cloudProvider, orgAccountID)
+}
+
 var randomLetters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func RandomString(n int) string {
