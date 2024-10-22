@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description:  Deepfence Cloud Scanner IAM role for Organization Deployment
+Description: Deepfence Cloud Scanner IAM role for Organization Deployment
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -33,21 +33,24 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       Path: /
-      RoleName: !Ref ParentStackName
-      AssumeRolePolicyDocument: !Sub |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "AWS": "arn:aws:iam::${CloudScannerAccountId}:role/${ParentStackName}"
-              },
-              "Action": "sts:AssumeRole"
-            }
-          ]
-        }
+      RoleName: !Join
+      - ''
+      - - !Ref ParentStackName
+      AssumeRolePolicyDocument: !Join
+      - ''
+      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["arn:aws:iam::'
+        - !Ref CloudScannerAccountId
+        - ':role/'
+        - !Join
+          - ''
+          - - !Ref ParentStackName
+            - EKSRole
+        - '"]},"Action":"sts:AssumeRole"}]}'
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - !Ref TaskIAMRole
-      Description: Provide AssumeRole permission to Deepfence Managed Cloud Scanner
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ''
+        - - !Ref ParentStackName
