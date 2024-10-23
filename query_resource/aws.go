@@ -110,16 +110,6 @@ var (
     "id_column": "api_id"
   },
   {
-    "table": "aws_appautoscaling_target",
-    "columns": [
-      "region",
-      "resource_id",
-      "service_namespace",
-      "title"
-    ],
-    "id_column": "resource_id"
-  },
-  {
     "table": "aws_appsync_graphql_api",
     "columns": [
       "account_id",
@@ -1407,7 +1397,6 @@ var (
     "table": "aws_ssm_document",
     "columns": [
       "account_id",
-      "account_ids",
       "arn",
       "name",
       "owner_type",
@@ -1426,19 +1415,6 @@ var (
       "title"
     ],
     "id_column": "arn"
-  },
-  {
-    "table": "aws_ssm_managed_instance_compliance",
-    "columns": [
-      "account_id",
-      "compliance_type",
-      "id",
-      "region",
-      "resource_id",
-      "status",
-      "title"
-    ],
-    "id_column": "title"
   },
   {
     "table": "aws_vpc",

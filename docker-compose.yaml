@@ -1,7 +1,7 @@
 services:
   cloud-scanner:
     container_name: deepfence-cloud-scanner
-    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner_ce:${DF_IMG_TAG:-2.4.0}
+    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner_ce:${DF_IMG_TAG:-3.0.0}
     restart: unless-stopped
     environment:
       # Deepfence management console url and port
@@ -59,6 +59,9 @@ services:
       # AZURE_CLIENT_ID: ""
       # AZURE_CLIENT_SECRET: ""
       # AZURE_SUBSCRIPTION_ID: ""
+      
+      # Provide base64 encoded Service Account Keys for GCP Scanner
+      # GCP_SERVICE_ACCOUNT_CREDENTIAL: ""
       
       DEPLOYMENT_MODE: "docker"
       HOME_DIR: "/home/deepfence"

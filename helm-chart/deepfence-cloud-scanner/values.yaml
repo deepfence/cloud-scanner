@@ -96,6 +96,7 @@ env_vars: {}
   # AZURE_CLIENT_ID :
   # AZURE_CLIENT_SECRET:
   # AZURE_SUBSCRIPTION_ID: 
+  # GCP_SERVICE_ACCOUNT_CREDENTIAL:
 
 imagePullSecrets: []
 nameOverride: ""
