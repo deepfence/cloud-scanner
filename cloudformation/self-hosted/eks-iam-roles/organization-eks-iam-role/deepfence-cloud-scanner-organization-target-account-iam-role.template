@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deepfence Cloud Scanner IAM role for Organization Deployment
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Configuration
+      Parameters:
+      - TaskIAMRole
+      - ParentStackName
+      - EKSClusterOIDCURL
+      - K8sNamespace
+      - K8sServiceAccountName
+      - SuccessSignalURL
+    ParameterLabels:
+      TaskIAMRole:
+        default: If SecurityAudit role is chosen, cloud scanner may not find
+          configuration issues in some of the AWS resources like WAF. Also
+          updates will happen only once every day.
+      ParentStackName:
+        default: Parent Stack Name
+      EKSClusterOIDCURL:
+        default: The OpenID Connect URL without protocol (the "https://" prefix)
+      K8sNamespace:
+        default: k8s namespace for the cloud-scanner
+      K8sServiceAccountName:
+        default: k8s service account for the cloud-scanner
+      SuccessSignalURL:
+        default: URL to send notification when IAM role is created
+Parameters:
+  TaskIAMRole:
+    Type: String
+    Description: Task Role
+    Default: arn:aws:iam::aws:policy/SecurityAudit
+    AllowedValues:
+    - arn:aws:iam::aws:policy/SecurityAudit
+    - arn:aws:iam::aws:policy/ReadOnlyAccess
+  ParentStackName:
+    Type: String
+  EKSClusterOIDCURL:
+    Type: String
+    Description: The OpenID Connect URL without protocol (the "https://" prefix)
+  K8sNamespace:
+    Type: String
+    Default: deepfence
+  K8sServiceAccountName:
+    Type: String
+    Default: deepfence-cloud-scanner
+  SuccessSignalURL:
+    Type: String
+Resources:
+  TargetAccountIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Join
+      - ''
+      - - !Ref ParentStackName
+        - '-EKSRole'
+      AssumeRolePolicyDocument: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSClusterOIDCURL}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${EKSClusterOIDCURL}:sub": "system:serviceaccount:${K8sNamespace}:${K8sServiceAccountName}",
+                  "${EKSClusterOIDCURL}:aud": "sts.amazonaws.com"
+                }
+              }
+            }
+          ]
+        }
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - !Ref TaskIAMRole
+      Policies:
+      - PolicyName: !Join
+        - ''
+        - - !Ref ParentStackName
+          - '-AllowAssumeRoleInChildAccounts'
+        PolicyDocument: !Join
+        - ''
+        - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Resource":["arn:aws:iam::*:role/'
+          - !Ref ParentStackName
+          - '"],"Action":"sts:AssumeRole"}]}'
+      Description: Provide AssumeRole permission to Deepfence Cloud Scanner on child
+        accounts
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ''
+        - - !Ref ParentStackName
+          - EKSRole
+  SuccessSignalFunctionResponse:
+    Type: Custom::SuccessSignalFunctionResponse
+    Properties:
+      ServiceToken: !GetAtt SuccessSignalFunction.Arn
+  SuccessSignalFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: TargetAccountIAMRole
+    Properties:
+      Description: Signal to the SuccessSignalURL from parent Stack on deploying IAM role
+      Environment:
+        Variables:
+          SuccessSignalURL: !Ref SuccessSignalURL
+          TargetAccountIAMRoleARN: !GetAtt TargetAccountIAMRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          from urllib import request
+          import os
+          import cfnresponse
+          def send_success(event, context):
+              success_signal_url = os.getenv('SuccessSignalURL')
+              req = request.Request(success_signal_url, method="PUT")
+              req.add_header('Content-Type', 'application/json')
+              data = {
+                "Status" : "SUCCESS",
+                "Reason" : "Complete",
+                "UniqueId" : "roleARN",
+                "Data" : os.getenv('TargetAccountIAMRoleARN')
+              }
+              data = json.dumps(data)
+              data = data.encode()
+              r = request.urlopen(req, data=data)
+              # content = r.read()
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {"response": "status code: {0}".format(r.getcode())})
+      Handler: index.send_success
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.12
+      Timeout: 60
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":["lambda.amazonaws.com"]},"Action":["sts:AssumeRole"]}]}'
+      Path: /
+      Policies:
+      - PolicyName: writelog
+        PolicyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"arn:aws:logs:*:*:*"}]}'
+Outputs:
+  K8sNamespace:
+    Description: Deploy the cloud scanner helm chart in this namespace
+    Value: !Ref K8sNamespace
+  K8sServiceAccountName:
+    Description: Set service account name in helm chart 'serviceAccount.name'
+    Value: !Ref K8sServiceAccountName
+  ServiceAccountRoleARN:
+    Description: Set the IAM role ARN in helm chart 'serviceAccount.annotations'
+    Value: !GetAtt TargetAccountIAMRole.Arn
+  SuccessSignalFunctionResponse:
+    Description: Status of signalling success on presigned URL from parent stack
+    Value: !GetAtt SuccessSignalFunctionResponse.response
+  MemberAccountsRoleName:
+    Description: Set the IAM role name in helm chart 'cloudAccount.roleName'
+    Value: !Ref ParentStackName

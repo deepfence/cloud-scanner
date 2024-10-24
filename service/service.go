@@ -103,7 +103,7 @@ func (c *ComplianceScanService) GetOrganizationAccounts() []util.MonitoredAccoun
 
 func (c *ComplianceScanService) fetchAWSOrganizationAccountIDs() ([]util.AccountsToRefresh, error) {
 	ctx := context.Background()
-	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.AccountID, c.config.CloudMetadata.Region, c.config, false)
+	cfg, err := util.GetAWSCredentialsConfig(ctx, c.config.OrganizationID, c.config.CloudMetadata.Region, c.config, false)
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +331,17 @@ func (c *ComplianceScanService) RunRegisterServices() error {
 	switch c.config.CloudProvider {
 	case util.CloudProviderAWS:
 		if c.config.IsOrganizationDeployment {
+			// Set organization account in credentials initially
+			c.organizationAccountIDsLock.Lock()
+			c.organizationAccountIDs = []util.MonitoredAccount{
+				{
+					AccountID: c.config.OrganizationID,
+					NodeID:    util.GetNodeID(c.config.CloudProvider, c.config.OrganizationID),
+				},
+			}
+			c.organizationAccountIDsLock.Unlock()
+			processAwsCredentials(c)
+
 			_, err = c.fetchAWSOrganizationAccountIDs()
 			if err != nil {
 				log.Error().Msg(err.Error())

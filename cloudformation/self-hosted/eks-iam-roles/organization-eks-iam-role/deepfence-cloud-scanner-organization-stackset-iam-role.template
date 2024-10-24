@@ -8,6 +8,11 @@ Metadata:
       Parameters:
       - TaskIAMRole
       - OrganizationalUnitIds
+      - EKSClusterName
+      - EKSClusterOIDCURL
+      - K8sNamespace
+      - K8sServiceAccountName
+      - TargetAWSAccountID
     ParameterLabels:
       EKSClusterName:
         default: EKS cluster where cloud-scanner will be deployed
@@ -21,6 +26,8 @@ Metadata:
         default: If SecurityAudit role is chosen, cloud scanner may not find configuration issues in some of the AWS resources like WAF. Also updates will happen only once every day.
       OrganizationalUnitIds:
         default: List of Organizational Unit IDs to deploy the StackSet (IAM Roles)
+      TargetAWSAccountID:
+        default: Target Member AWS Account ID
 Parameters:
   EKSClusterName:
     Type: String
@@ -43,53 +50,66 @@ Parameters:
   OrganizationalUnitIds:
     Type: List<String>
     Description: Organizational Unit IDs
+  TargetAWSAccountID:
+    Type: String
+    Description: AWS account ID of EKS cluster
 Resources:
-  ReadOnlyRole:
-    Type: AWS::IAM::Role
+  TargetAccountIAMRoleStackSetComplete:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  TargetAccountIAMRoleStackSetCompleteWait:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: TargetAccountIAMRoleStackSet
     Properties:
-      Path: /
-      RoleName: !Ref 'AWS::StackName'
-      AssumeRolePolicyDocument: !Sub |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Federated": "arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSClusterOIDCURL}"
-              },
-              "Action": "sts:AssumeRoleWithWebIdentity",
-              "Condition": {
-                "StringEquals": {
-                  "${EKSClusterOIDCURL}:sub": "system:serviceaccount:${K8sNamespace}:${K8sServiceAccountName}",
-                  "${EKSClusterOIDCURL}:aud": "sts.amazonaws.com"
-                }
-              }
-            }
-          ]
-        }
-      MaxSessionDuration: 3600
-      ManagedPolicyArns:
-      - !Ref TaskIAMRole
-      - arn:aws:iam::aws:policy/AWSOrganizationsReadOnlyAccess
-      Policies:
-      - PolicyName: !Sub "${AWS::StackName}-AllowAssumeRoleInChildAccounts"
-        PolicyDocument: !Sub |
-          {
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Resource": ["arn:aws:iam::*:role/${AWS::StackName}"],
-                "Action": "sts:AssumeRole"
-              }
-            ]
-          }
-      Description: Provide AssumeRole permission to Deepfence Cloud Scanner on child accounts
-  StackSet:
+      Handle: !Ref TargetAccountIAMRoleStackSetComplete
+      Timeout: '180'
+  TargetAccountIAMRoleStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties:
-      Description: 'Deploy IAM role across accounts in the Organization to provide permission to Cloud Scanner'
+      AutoDeployment:
+        Enabled: false
+      Capabilities:
+      - CAPABILITY_NAMED_IAM
+      Description: Deployment of IAM Role for Cloud Scanner in the AWS account of EKS cluster
+      ManagedExecution:
+        Active: true
+      OperationPreferences:
+        FailureToleranceCount: 0
+        MaxConcurrentCount: 1
+        RegionConcurrencyType: SEQUENTIAL
+        RegionOrder:
+        - !Ref AWS::Region
+      Parameters:
+      - ParameterKey: ParentStackName
+        ParameterValue: !Ref AWS::StackName
+      - ParameterKey: TaskIAMRole
+        ParameterValue: !Ref TaskIAMRole
+      - ParameterKey: EKSClusterOIDCURL
+        ParameterValue: !Ref EKSClusterOIDCURL
+      - ParameterKey: K8sNamespace
+        ParameterValue: !Ref K8sNamespace
+      - ParameterKey: K8sServiceAccountName
+        ParameterValue: !Ref K8sServiceAccountName
+      - ParameterKey: SuccessSignalURL
+        ParameterValue: !Ref TargetAccountIAMRoleStackSetComplete
+      PermissionModel: SERVICE_MANAGED
+      StackInstancesGroup:
+      - DeploymentTargets:
+          AccountFilterType: INTERSECTION
+          OrganizationalUnitIds: !Ref OrganizationalUnitIds
+          Accounts:
+          - !Ref TargetAWSAccountID
+        Regions:
+        - !Ref AWS::Region
+      StackSetName: !Join
+      - ''
+      - - !Ref AWS::StackName
+        - OrgDeployment
+      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-target-account-iam-role.template
+  MemberAccountsIAMRoleStackSet:
+    Type: AWS::CloudFormation::StackSet
+    DependsOn: TargetAccountIAMRoleStackSetCompleteWait
+    Properties:
+      Description: Deploy IAM role across accounts in the Organization to provide permission to Cloud Scanner
       AutoDeployment:
         Enabled: true
         RetainStacksOnAccountRemoval: false
@@ -105,24 +125,60 @@ Resources:
       - ParameterKey: TaskIAMRole
         ParameterValue: !Ref TaskIAMRole
       - ParameterKey: ParentStackName
-        ParameterValue: !Ref 'AWS::StackName'
+        ParameterValue: !Ref AWS::StackName
       - ParameterKey: CloudScannerAccountId
-        ParameterValue: !Ref 'AWS::AccountId'
+        ParameterValue: !Ref TargetAWSAccountID
       PermissionModel: SERVICE_MANAGED
       StackInstancesGroup:
       - DeploymentTargets:
-          AccountFilterType: NONE
+          AccountFilterType: DIFFERENCE
           OrganizationalUnitIds: !Ref OrganizationalUnitIds
+          Accounts:
+          - !Ref AWS::AccountId
         Regions:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
       TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
+  OrganizationAccountIAMRole:
+    Type: AWS::IAM::Role
+    DependsOn: TargetAccountIAMRoleStackSetCompleteWait
+    Properties:
+      Path: /
+      RoleName: !Join
+      - ''
+      - - !Ref AWS::StackName
+      AssumeRolePolicyDocument: !Join
+      - ''
+      - - '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["arn:aws:iam::'
+        - !Ref TargetAWSAccountID
+        - ':role/'
+        - !Join
+          - ''
+          - - !Ref AWS::StackName
+            - EKSRole
+        - '"]},"Action":"sts:AssumeRole"}]}'
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+      - !Ref TaskIAMRole
+      - arn:aws:iam::aws:policy/AWSOrganizationsReadOnlyAccess
+      Tags:
+      - Key: Name
+        Value: !Join
+        - ''
+        - - !Ref AWS::StackName
 Outputs:
   EKSClusterName:
+    Description: EKS cluster name, for your reference
     Value: !Ref EKSClusterName
   K8sNamespace:
+    Description: Deploy the cloud scanner helm chart in this namespace
     Value: !Ref K8sNamespace
   K8sServiceAccountName:
+    Description: Set service account name in helm chart 'serviceAccount.name'
     Value: !Ref K8sServiceAccountName
-  ReadOnlyRoleIAMRoleARN:
-    Value: !GetAtt ReadOnlyRole.Arn
+  ServiceAccountRoleARN:
+    Description: Set the IAM role ARN in helm chart 'serviceAccount.annotations'
+    Value: !GetAtt TargetAccountIAMRoleStackSetCompleteWait.Data
+  MemberAccountsRoleName:
+    Description: Set the IAM role name in helm chart 'cloudAccount.roleName'
+    Value: !Ref AWS::StackName
