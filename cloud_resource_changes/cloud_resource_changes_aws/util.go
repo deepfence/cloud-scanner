@@ -54,7 +54,7 @@ func getCloudTrailTrails(config util.Config) []CloudTrailTrail {
 		query = "steampipe query --output json \"select * from aws_all.aws_cloudtrail_trail where is_multi_region_trail = true " + isOrganizationTrail + " and arn in ('" + strings.Join(config.CloudAuditLogsIDs, "', '") + "')\""
 	}
 
-	log.Debug().Msgf("(getCloudTrailTrails) Query: %s", query)
+	log.Debug().Msgf("Steampipe Query: %s", query)
 
 	cmd := exec.Command("bash", "-c", query)
 	stdOut, stdErr := cmd.CombinedOutput()
