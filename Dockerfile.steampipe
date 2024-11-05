@@ -1,4 +1,4 @@
-FROM golang:1.21-bookworm AS build-steampipe
+FROM golang:1.23-bookworm AS build-steampipe
 
 WORKDIR /app/code
 
@@ -10,7 +10,7 @@ RUN git clone https://github.com/deepfence/steampipe --branch v0.23.x --depth 1 
     && go build -o steampipe
 
 
-FROM golang:1.21-bookworm AS build-steampipe-plugin-aws
+FROM golang:1.23-bookworm AS build-steampipe-plugin-aws
 
 WORKDIR /app/code
 
@@ -22,7 +22,7 @@ RUN git clone https://github.com/deepfence/steampipe-plugin-aws --branch v0.144.
     && go build -o steampipe-plugin-aws.plugin *.go
 
 
-FROM golang:1.21-bookworm AS build-steampipe-plugin-gcp
+FROM golang:1.23-bookworm AS build-steampipe-plugin-gcp
 
 WORKDIR /app/code
 
@@ -34,7 +34,7 @@ RUN git clone https://github.com/deepfence/steampipe-plugin-gcp --branch v0.54.1
     && go build -o steampipe-plugin-gcp.plugin *.go
 
 
-FROM golang:1.21-bookworm AS build-steampipe-plugin-azure
+FROM golang:1.23-bookworm AS build-steampipe-plugin-azure
 
 WORKDIR /app/code
 
@@ -46,7 +46,7 @@ RUN git clone https://github.com/deepfence/steampipe-plugin-azure --branch v0.61
     && go build -o steampipe-plugin-azure.plugin *.go
 
 
-FROM golang:1.21-bookworm AS build-steampipe-plugin-azuread
+FROM golang:1.23-bookworm AS build-steampipe-plugin-azuread
 
 WORKDIR /app/code
 
