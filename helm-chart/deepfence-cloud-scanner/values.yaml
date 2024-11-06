@@ -58,6 +58,7 @@ logLevel: info
 
 # Optional: To refresh the cloud resources every hour, provide CloudTrail Trail ARNs (Management events with write-only or read-write).
 # If empty, a trail with management events will be automatically chosen if available.
+cloudAuditLogsEnabled: false
 cloudAuditLogIDs: ""
 
 # Only applicable in AWS

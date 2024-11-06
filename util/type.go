@@ -63,6 +63,7 @@ type Config struct {
 	IsOrganizationDeployment bool     `envconfig:"ORGANIZATION_DEPLOYMENT" default:"false" json:"is_organization_deployment"`
 	RoleName                 string   `envconfig:"ROLE_NAME" json:"role_name"`
 	AWSCredentialSource      string   `envconfig:"AWS_CREDENTIAL_SOURCE" json:"aws_credential_source"`
+	CloudAuditLogsEnabled    bool     `envconfig:"CLOUD_AUDIT_LOGS_ENABLED" default:"true" json:"cloud_audit_logs_enabled"`
 	CloudAuditLogsIDs        []string `envconfig:"CLOUD_AUDIT_LOG_IDS" json:"cloud_audit_logs_ids"`
 	HttpServerRequired       bool     `envconfig:"HTTP_SERVER_REQUIRED" default:"false" json:"http_server_required"`
 	SuccessSignalUrl         string   `envconfig:"SUCCESS_SIGNAL_URL" json:"success_signal_url"`

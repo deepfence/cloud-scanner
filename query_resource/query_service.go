@@ -45,6 +45,10 @@ func NewResourceRefreshService(config util.Config) (*ResourceRefreshService, err
 }
 
 func (r *ResourceRefreshService) Initialize() {
+	if !r.config.CloudAuditLogsEnabled {
+		log.Info().Msg("CLOUD_AUDIT_LOGS_ENABLED set to false. Disabling CloudTrail based updates of cloud resources.")
+		return
+	}
 	log.Info().Msgf("CloudResourceChanges Initialization started")
 	ok, err := r.CloudResourceChanges.Initialize()
 	if err != nil {
