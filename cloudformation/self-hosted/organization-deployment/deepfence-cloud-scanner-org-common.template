@@ -37,6 +37,7 @@ Metadata:
       - TaskCPU
       - TaskMemory
       - TaskEphemeralStorage
+      - EnableCloudTrailTrails
       - CloudTrailTrails
     ParameterLabels:
       ManagementConsoleURL:
@@ -76,8 +77,10 @@ Metadata:
         default: 'Task Memory (Default: 16 GB)'
       TaskEphemeralStorage:
         default: 'Task Ephemeral Storage (Default: 100 GB)'
+      EnableCloudTrailTrails:
+        default: Enable CloudTrail based updates
       CloudTrailTrails:
-        default: Cloud Trail ARNs (comma separated) to refresh every hour on changes in the infrastructure
+        default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -149,6 +152,13 @@ Parameters:
     Type: String
     Description: Ephemeral Storage (GB)
     Default: '100'
+  EnableCloudTrailTrails:
+    Type: String
+    Description: true/false
+    Default: false
+    AllowedValues:
+    - false
+    - true
   CloudTrailTrails:
     Type: String
     Description: >-
@@ -280,6 +290,8 @@ Resources:
         ParameterValue: !Ref TaskMemory
       - ParameterKey: TaskEphemeralStorage
         ParameterValue: !Ref TaskEphemeralStorage
+      - ParameterKey: EnableCloudTrailTrails
+        ParameterValue: !Ref EnableCloudTrailTrails
       - ParameterKey: CloudTrailTrails
         ParameterValue: !Ref CloudTrailTrails
       PermissionModel: SERVICE_MANAGED

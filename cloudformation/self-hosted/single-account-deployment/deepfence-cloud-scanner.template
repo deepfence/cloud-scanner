@@ -35,6 +35,7 @@ Metadata:
       - TaskCPU
       - TaskMemory
       - TaskEphemeralStorage
+      - EnableCloudTrailTrails
       - CloudTrailTrails
     ParameterLabels:
       ManagementConsoleURL:
@@ -71,8 +72,10 @@ Metadata:
         default: 'Task Memory (Default: 8 GB)'
       TaskEphemeralStorage:
         default: 'Task Ephemeral Storage (Default: 100 GB)'
+      EnableCloudTrailTrails:
+        default: Enable CloudTrail based updates
       CloudTrailTrails:
-        default: Cloud Trail ARNs (comma separated) to refresh every hour on changes in the infrastructure
+        default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -143,6 +146,13 @@ Parameters:
     Type: String
     Description: Ephemeral Storage (GB)
     Default: '100'
+  EnableCloudTrailTrails:
+    Type: String
+    Description: true/false
+    Default: false
+    AllowedValues:
+    - false
+    - true
   CloudTrailTrails:
     Type: String
     Description: CloudTrail Trail ARNs (Management events with write-only or read-write). If empty, a trail with management events will be automatically chosen if available.
@@ -301,6 +311,8 @@ Resources:
           Value: !Ref AWS::StackName
         - Name: AWS_CREDENTIAL_SOURCE
           Value: EcsContainer
+        - Name: CLOUD_AUDIT_LOGS_ENABLED
+          Value: !Ref EnableCloudTrailTrails
         - Name: CLOUD_AUDIT_LOG_IDS
           Value: !Ref CloudTrailTrails
         - Name: HTTP_SERVER_REQUIRED

@@ -42,6 +42,7 @@ services:
       
       # Optional: To refresh the cloud resources every hour, provide CloudTrail Trail ARNs (Management events with write-only or read-write).
       # If empty, a trail with management events will be automatically chosen if available.
+      CLOUD_AUDIT_LOGS_ENABLED: "false"
       CLOUD_AUDIT_LOG_IDS: ""
       HTTP_SERVER_REQUIRED: "false"
       SUCCESS_SIGNAL_URL: ""
