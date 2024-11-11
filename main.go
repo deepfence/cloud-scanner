@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/deepfence/ThreatMapper/deepfence_utils/log"
+	"github.com/deepfence/ThreatMapper/deepfence_utils/utils"
 	cloudmetadata "github.com/deepfence/cloud-scanner/cloud-metadata"
 	"github.com/deepfence/cloud-scanner/internal/deepfence"
 	"github.com/deepfence/cloud-scanner/service"
@@ -121,7 +122,10 @@ func main() {
 		log.Fatal().Msg(err.Error())
 		return
 	}
-	config.InstallationID = strings.ReplaceAll(string(fileContent), "\n", "")
+	config.InstallationID = strings.TrimSpace(strings.ReplaceAll(string(fileContent), "\n", ""))
+	if config.InstallationID == "" {
+		config.InstallationID = utils.NewUUIDString()
+	}
 
 	configJson, err := json.MarshalIndent(config, "", "\t")
 	if err == nil {
