@@ -502,6 +502,22 @@ func processAzureCredentials(c *ComplianceScanService) {
 
 func processAwsCredentials(c *ComplianceScanService) {
 	regionString := "regions = [\"*\"]\n"
+	if len(c.config.DisabledCloudRegions) > 0 {
+		disabledCloudRegions := strings.Split(c.config.DisabledCloudRegions, ",")
+		var filteredRegions []string
+		for _, awsRegion := range util.AWSRegions {
+			if util.InSlice(awsRegion, disabledCloudRegions) {
+				continue
+			}
+			filteredRegions = append(filteredRegions, awsRegion)
+		}
+		filteredRegionsJson, err := json.Marshal(filteredRegions)
+		if err != nil {
+			log.Warn().Msg(err.Error())
+		} else {
+			regionString = string(filteredRegionsJson)
+		}
+	}
 
 	allAccountIDs := []string{}
 	if c.config.IsOrganizationDeployment {
