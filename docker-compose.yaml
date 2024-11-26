@@ -1,7 +1,7 @@
 services:
   cloud-scanner:
     container_name: deepfence-cloud-scanner
-    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner_ce:${DF_IMG_TAG:-2.5.0}
+    image: ${IMAGE_REPOSITORY:-quay.io/deepfenceio}/cloud_scanner_ce:${DF_IMG_TAG:-2.5.1}
     restart: unless-stopped
     environment:
       # Deepfence management console url and port
@@ -10,9 +10,15 @@ services:
       MGMT_CONSOLE_PORT: 443
       # Get Deepfence api key from UI -> Settings -> User Management
       DEEPFENCE_KEY: ""
+      
       # aws / gcp / azure
       CLOUD_PROVIDER: ""
       CLOUD_REGION: ""
+      
+      # Applicable only in AWS
+      # Optional: Comma separated list of cloud regions which should not be scanned
+      DISABLED_CLOUD_REGIONS: ""
+      
       # AWS account ID / GCP project ID / Azure subscription ID to monitor
       CLOUD_ACCOUNT_ID: ""
       # Optional: AWS account ID / GCP project ID / Azure subscription ID where the helm chart is deployed,

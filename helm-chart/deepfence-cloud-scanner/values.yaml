@@ -4,7 +4,7 @@ image:
   # ThreatStryker
   # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
-  tag: 2.5.0
+  tag: 2.5.1
 
 # Deepfence management console url and port
 # Format: deepfence.customer.com or 123.123.123.123
@@ -27,6 +27,10 @@ cloudAccount:
   # aws / gcp / azure
   cloudProvider: ""
   region: ""
+
+  # Applicable only in AWS
+  # Optional: Comma separated list of cloud regions which should not be scanned
+  disabledCloudRegions: ""
   
   # Applicable only in AWS
   # Policy set for Cloud Scanner in CloudFormation / terraform

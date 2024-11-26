@@ -16,6 +16,7 @@ Metadata:
         default: Cluster Configuration
       Parameters:
       - Cluster
+      - DisabledCloudRegions
     - Label:
         default: VPC Configuration
       Parameters:
@@ -76,6 +77,8 @@ Metadata:
         default: Enable CloudTrail based updates
       CloudTrailTrails:
         default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
+      DisabledCloudRegions:
+        default: AWS regions to disable
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -89,7 +92,7 @@ Parameters:
     Type: String
     Description: For easy identification
   CloudScannerImage:
-    Default: 'quay.io/deepfenceio/cloud_scanner_ce:2.5.0'
+    Default: 'quay.io/deepfenceio/cloud_scanner_ce:2.5.1'
     Type: String
   LogLevel:
     Default: info
@@ -156,6 +159,9 @@ Parameters:
   CloudTrailTrails:
     Type: String
     Description: CloudTrail Trail ARNs (Management events with write-only or read-write). If empty, a trail with management events will be automatically chosen if available.
+  DisabledCloudRegions:
+    Type: String
+    Description: These regions will not be scanned
 Conditions:
   CreateNewVPC: !Equals
   - !Ref VPC
@@ -301,6 +307,8 @@ Resources:
           Value: aws
         - Name: CLOUD_REGION
           Value: !Ref AWS::Region
+        - Name: DISABLED_CLOUD_REGIONS
+          Value: !Ref DisabledCloudRegions
         - Name: CLOUD_ACCOUNT_ID
           Value: !Ref AWS::AccountId
         - Name: DEPLOYED_ACCOUNT_ID
