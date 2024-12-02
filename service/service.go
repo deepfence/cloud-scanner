@@ -515,7 +515,7 @@ func processAwsCredentials(c *ComplianceScanService) {
 		if err != nil {
 			log.Warn().Msg(err.Error())
 		} else {
-			regionString = string(filteredRegionsJson)
+			regionString = "regions = " + string(filteredRegionsJson) + "\n"
 		}
 	}
 
