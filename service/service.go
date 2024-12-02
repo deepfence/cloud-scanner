@@ -506,6 +506,7 @@ func processAwsCredentials(c *ComplianceScanService) {
 		enabledCloudRegions := strings.Split(c.config.EnabledCloudRegions, ",")
 		var filteredRegions []string
 		for _, awsRegion := range enabledCloudRegions {
+			awsRegion = strings.TrimSpace(awsRegion)
 			if util.InSlice(awsRegion, util.AWSRegions) {
 				filteredRegions = append(filteredRegions, awsRegion)
 			}
@@ -516,6 +517,7 @@ func processAwsCredentials(c *ComplianceScanService) {
 		} else {
 			regionString = "regions = " + string(filteredRegionsJson) + "\n"
 		}
+		log.Info().Msgf("AWS regions configured: %s", string(filteredRegionsJson))
 	}
 
 	allAccountIDs := []string{}
