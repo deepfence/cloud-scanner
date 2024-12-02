@@ -89,7 +89,7 @@ Metadata:
       CloudTrailTrails:
         default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
       DisabledCloudRegions:
-        default: AWS regions to disable
+        default: AWS regions to disable (Optional)
 Parameters:
   ManagementConsoleURL:
     Type: String
