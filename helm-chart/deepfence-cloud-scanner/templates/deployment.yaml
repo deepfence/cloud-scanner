@@ -53,8 +53,8 @@ spec:
             value: "{{ required "cloudAccount.cloudProvider is required" .Values.cloudAccount.cloudProvider }}"
           - name: CLOUD_REGION
             value: "{{ required "cloudAccount.region is required" .Values.cloudAccount.region }}"
-          - name: DISABLED_CLOUD_REGIONS
-            value: "{{ .Values.cloudAccount.disabledCloudRegions }}"
+          - name: ENABLED_CLOUD_REGIONS
+            value: "{{ .Values.cloudAccount.enabledCloudRegions }}"
           - name: CLOUD_ACCOUNT_ID
             value: "{{ required "cloudAccount.accountID is required" .Values.cloudAccount.accountID }}"
           - name: DEPLOYED_ACCOUNT_ID

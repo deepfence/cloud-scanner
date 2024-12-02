@@ -56,7 +56,7 @@ type Config struct {
 	DeepfenceKey             string   `envconfig:"DEEPFENCE_KEY" validate:"required" json:"-"`
 	CloudProvider            string   `envconfig:"CLOUD_PROVIDER" json:"cloud_provider"`
 	CloudRegion              string   `envconfig:"CLOUD_REGION" json:"cloud_region"`
-	DisabledCloudRegions     string   `envconfig:"DISABLED_CLOUD_REGIONS" json:"disabled_cloud_regions"`
+	EnabledCloudRegions      string   `envconfig:"ENABLED_CLOUD_REGIONS" json:"enabled_cloud_regions"`
 	AccountID                string   `envconfig:"CLOUD_ACCOUNT_ID" json:"account_id"`
 	DeployedAccountID        string   `envconfig:"DEPLOYED_ACCOUNT_ID" json:"deployed_account_id"`
 	AccountName              string   `envconfig:"CLOUD_ACCOUNT_NAME" json:"account_name"`

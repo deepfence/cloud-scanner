@@ -16,8 +16,10 @@ services:
       CLOUD_REGION: ""
       
       # Applicable only in AWS
-      # Optional: Comma separated list of cloud regions which should not be scanned
-      DISABLED_CLOUD_REGIONS: ""
+      # Optional: Comma separated list of regions which should be scanned. All other regions will be disabled.
+      # All regions enabled by default
+      # Example: ENABLED_CLOUD_REGIONS: "us-east-1,us-east-2"
+      ENABLED_CLOUD_REGIONS: ""
       
       # AWS account ID / GCP project ID / Azure subscription ID to monitor
       CLOUD_ACCOUNT_ID: ""

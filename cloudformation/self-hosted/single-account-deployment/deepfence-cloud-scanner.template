@@ -16,7 +16,7 @@ Metadata:
         default: Cluster Configuration
       Parameters:
       - Cluster
-      - DisabledCloudRegions
+      - EnabledCloudRegions
     - Label:
         default: VPC Configuration
       Parameters:
@@ -77,8 +77,8 @@ Metadata:
         default: Enable CloudTrail based updates
       CloudTrailTrails:
         default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
-      DisabledCloudRegions:
-        default: AWS regions to disable (Optional)
+      EnabledCloudRegions:
+        default: AWS regions to scan (Optional, all regions enabled by default)
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -92,7 +92,7 @@ Parameters:
     Type: String
     Description: For easy identification
   CloudScannerImage:
-    Default: 'quay.io/deepfenceio/cloud_scanner_ce:2.5.1'
+    Default: quay.io/deepfenceio/cloud_scanner_ce:2.5.1
     Type: String
   LogLevel:
     Default: info
@@ -159,9 +159,9 @@ Parameters:
   CloudTrailTrails:
     Type: String
     Description: CloudTrail Trail ARNs (Management events with write-only or read-write). If empty, a trail with management events will be automatically chosen if available.
-  DisabledCloudRegions:
+  EnabledCloudRegions:
     Type: String
-    Description: These regions will not be scanned
+    Description: 'Only these regions will be scanned. All other regions will be disabled. Example: us-east-1,us-east-2'
 Conditions:
   CreateNewVPC: !Equals
   - !Ref VPC
@@ -307,8 +307,8 @@ Resources:
           Value: aws
         - Name: CLOUD_REGION
           Value: !Ref AWS::Region
-        - Name: DISABLED_CLOUD_REGIONS
-          Value: !Ref DisabledCloudRegions
+        - Name: ENABLED_CLOUD_REGIONS
+          Value: !Ref EnabledCloudRegions
         - Name: CLOUD_ACCOUNT_ID
           Value: !Ref AWS::AccountId
         - Name: DEPLOYED_ACCOUNT_ID
@@ -369,7 +369,7 @@ Resources:
         - Effect: Allow
           Principal:
             Service: ecs-tasks.amazonaws.com
-          Action: 'sts:AssumeRole'
+          Action: sts:AssumeRole
       MaxSessionDuration: 3600
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy

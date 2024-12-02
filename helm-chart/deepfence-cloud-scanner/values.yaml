@@ -29,8 +29,10 @@ cloudAccount:
   region: ""
 
   # Applicable only in AWS
-  # Optional: Comma separated list of cloud regions which should not be scanned
-  disabledCloudRegions: ""
+  # Optional: Comma separated list of regions which should be scanned. All other regions will be disabled.
+  # All regions enabled by default
+  # Example: enabledCloudRegions: "us-east-1,us-east-2"
+  enabledCloudRegions: ""
   
   # Applicable only in AWS
   # Policy set for Cloud Scanner in CloudFormation / terraform

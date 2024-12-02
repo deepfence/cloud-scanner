@@ -502,14 +502,13 @@ func processAzureCredentials(c *ComplianceScanService) {
 
 func processAwsCredentials(c *ComplianceScanService) {
 	regionString := "regions = [\"*\"]\n"
-	if len(c.config.DisabledCloudRegions) > 0 {
-		disabledCloudRegions := strings.Split(c.config.DisabledCloudRegions, ",")
+	if len(c.config.EnabledCloudRegions) > 0 {
+		enabledCloudRegions := strings.Split(c.config.EnabledCloudRegions, ",")
 		var filteredRegions []string
-		for _, awsRegion := range util.AWSRegions {
-			if util.InSlice(awsRegion, disabledCloudRegions) {
-				continue
+		for _, awsRegion := range enabledCloudRegions {
+			if util.InSlice(awsRegion, util.AWSRegions) {
+				filteredRegions = append(filteredRegions, awsRegion)
 			}
-			filteredRegions = append(filteredRegions, awsRegion)
 		}
 		filteredRegionsJson, err := json.Marshal(filteredRegions)
 		if err != nil {

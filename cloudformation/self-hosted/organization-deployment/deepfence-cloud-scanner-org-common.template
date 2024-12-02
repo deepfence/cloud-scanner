@@ -16,6 +16,7 @@ Metadata:
       Parameters:
       - TargetAWSAccountID
       - ClusterName
+      - EnabledCloudRegions
     - Label:
         default: Create New VPC
       Parameters:
@@ -81,6 +82,8 @@ Metadata:
         default: Enable CloudTrail based updates
       CloudTrailTrails:
         default: CloudTrail ARNs (comma separated) to refresh every hour on changes in the infrastructure
+      EnabledCloudRegions:
+        default: AWS regions to scan (Optional, all regions enabled by default)
 Parameters:
   ManagementConsoleURL:
     Type: String
@@ -164,6 +167,9 @@ Parameters:
     Description: >-
       CloudTrail Trail ARNs (Management events with write-only or read-write).
       If empty, a trail with management events will be automatically chosen if available.
+  EnabledCloudRegions:
+    Type: String
+    Description: 'Only these regions will be scanned. All other regions will be disabled. Example: us-east-1,us-east-2'
 Resources:
   OrgAccIds:
     Type: 'Custom::OrgAccIds'
@@ -264,6 +270,8 @@ Resources:
         ParameterValue: !Ref LogLevel
       - ParameterKey: ClusterName
         ParameterValue: !Ref ClusterName
+      - ParameterKey: EnabledCloudRegions
+        ParameterValue: !Ref EnabledCloudRegions
       - ParameterKey: VPCName
         ParameterValue: !Ref VPCName
       - ParameterKey: VPC
