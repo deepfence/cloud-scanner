@@ -68,4 +68,4 @@ Resources:
         Regions:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
-      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/deepfence-managed/organization-deployment/manual-deployment/deepfence-managed-cloud-scanner-organization-iam-role.template
+      TemplateURL: https://artifacts.threatmapper.org/cloud-scanner/deepfence-managed/organization-deployment/manual-deployment/deepfence-managed-cloud-scanner-organization-iam-role.template

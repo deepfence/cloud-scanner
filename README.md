@@ -8,7 +8,7 @@ Deploy Deepfence Cloud Scanner using the appropriate Terraform module for the cl
 
 - Cloud scanner is deployed in ECS Fargate / GCP Cloud Run / Azure Container Instance
 - Deployment is done using AWS CloudFormation template or terraform
-- Documentation: https://docs.deepfence.io/threatmapper/docs/cloudscanner/
+- Documentation: https://threatmapper.org/threatmapper/docs/cloudscanner/
 
 ## Build Cloud Scanner
 

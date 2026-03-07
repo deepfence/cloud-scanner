@@ -95,7 +95,7 @@ Parameters:
     NoEcho: true
     Type: String
   CloudScannerImage:
-    Default: quay.io/deepfenceio/cloud_scanner_ce:2.5.7
+    Default: quay.io/deepfenceio/cloud_scanner_ce:2.5.8
     Type: String
   ClusterName:
     Default: deepfence-cloud-scanner

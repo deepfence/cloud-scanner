@@ -4,7 +4,7 @@ image:
   # ThreatStryker
   # repository: quay.io/deepfenceio/cloud_scanner
   pullPolicy: Always
-  tag: 2.5.7
+  tag: 2.5.8
 
 # Deepfence management console url and port
 # Format: deepfence.customer.com or 123.123.123.123

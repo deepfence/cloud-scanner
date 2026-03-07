@@ -89,7 +89,7 @@ Resources:
         Regions:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
-      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
+      TemplateURL: https://artifacts.threatmapper.org/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
   InstanceProfile:
     DependsOn: ReadOnlyRole
     Type: "AWS::IAM::InstanceProfile"

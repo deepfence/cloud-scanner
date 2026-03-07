@@ -104,7 +104,7 @@ Resources:
       - ''
       - - !Ref AWS::StackName
         - OrgDeployment
-      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-target-account-iam-role.template
+      TemplateURL: https://artifacts.threatmapper.org/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-target-account-iam-role.template
   MemberAccountsIAMRoleStackSet:
     Type: AWS::CloudFormation::StackSet
     DependsOn: TargetAccountIAMRoleStackSetCompleteWait
@@ -138,7 +138,7 @@ Resources:
         Regions:
         - !Ref AWS::Region
       StackSetName: !Ref AWS::StackName
-      TemplateURL: https://deepfence-public.s3.amazonaws.com/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
+      TemplateURL: https://artifacts.threatmapper.org/cloud-scanner/self-hosted/eks-iam-roles/organization-eks-iam-role/deepfence-cloud-scanner-organization-iam-role.template
   OrganizationAccountIAMRole:
     Type: AWS::IAM::Role
     DependsOn: TargetAccountIAMRoleStackSetCompleteWait
